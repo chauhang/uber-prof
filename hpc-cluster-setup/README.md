@@ -37,6 +37,13 @@ chmod 600 ~/.ssh/my-hpc-cluster-key
 ```bash
 # Add executable permission to gen_cluster_config.sh script
 chmod +x gen_cluster_config.sh
+# Create cluster.ini file
+./gen_cluster_config.sh
+```
+
+## Create HPC cluster
+
+```bash
 # Create hpc cluster
 pcluster create my-hpc-cluster -c cluster.ini
 ```
