@@ -17,7 +17,7 @@
 
 Note: This document uses aws-parallelcluster version 2.
 
-## Upload post-install script
+## Create s3 bucket
 
 ```bash
 export BUCKET_POSTFIX=$(uuidgen --random | cut -d'-' -f1)
@@ -29,6 +29,13 @@ Output:
 
 ```bash
 make_bucket: s3://mybucket-057bf1b1
+```
+
+## Upload post-install script
+
+```bash
+aws s3 cp post-install.sh s3://mlbucket-${BUCKET_POSTFIX}
+upload: ./post-install.sh to s3://mlbucket-057bf1b1/post-install.sh
 ```
 
 ## Create key-pair for hpc cluster
