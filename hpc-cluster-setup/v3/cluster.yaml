@@ -19,8 +19,7 @@ HeadNode:
     KeyName: dist-ml-key
   CustomActions:
     OnNodeConfigured:
-      # TODO: Update post-install.sh url after merge
-      Script: https://raw.githubusercontent.com/perifaws/aws-parallelcluster-monitoring/main/post-install.sh
+      Script: s3://mlbucket-057bf1b1/post-install.sh
       Args:
         - "https://github.com/perifaws/aws-parallelcluster-monitoring/tarball/main"
         - aws-parallelcluster-monitoring
@@ -46,8 +45,7 @@ Scheduling:
           - Policy: arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess
       CustomActions:
         OnNodeConfigured:
-          # TODO: Update post-install.sh url after merge
-          Script: https://raw.githubusercontent.com/perifaws/aws-parallelcluster-monitoring/main/post-install.sh
+          Script: s3://mlbucket-057bf1b1/post-install.sh
           Args:
             - https://github.com/perifaws/aws-parallelcluster-monitoring/tarball/main
             - aws-parallelcluster-monitoring
