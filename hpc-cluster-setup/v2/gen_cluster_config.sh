@@ -20,11 +20,12 @@ sanity_check = true
 key_name = dist-ml-key
 base_os = alinux2
 scheduler = slurm
-master_instance_type = t3.2xlarge
+master_instance_type = c5.2xlarge
 s3_read_write_resource = arn:aws:s3:::mlbucket-${BUCKET_POSTFIX}*
 scaling_settings = custom
 vpc_settings = public
 ebs_settings = myebs
+fsx_settings = myfsx
 queue_settings = compute
 dcv_settings = default
 post_install = s3://mlbucket-${BUCKET_POSTFIX}/post-install.sh
@@ -36,9 +37,10 @@ enable = master
 compute_resource_settings = default
 disable_hyperthreading = true
 placement_group = DYNAMIC
+enable_efa = true
  
 [compute_resource default]
-instance_type = p3.2xlarge
+instance_type = p3dn.24xlarge
 min_count = 2
 max_count = 4
 
@@ -53,7 +55,13 @@ master_subnet_id = ${SUBNET_ID}
 shared_dir = /shared
 volume_type = gp2
 volume_size = 50
-  
+ 
+[fsx myfsx]
+shared_dir = /lustre
+storage_capacity = 1200
+import_path =  s3://mlbucket-${BUCKET_POSTFIX}
+deployment_type = SCRATCH_2
+ 
 [aliases]
 ssh = ssh {CFN_USER}@{MASTER_IP} {ARGS}
 

@@ -16,9 +16,10 @@ HeadNode:
   Networking:
     SubnetId: subnet-861deddb
   Ssh:
-    KeyName: hpc-key
+    KeyName: dist-ml-key
   CustomActions:
     OnNodeConfigured:
+      # TODO: Update post-install.sh url after merge
       Script: https://raw.githubusercontent.com/perifaws/aws-parallelcluster-monitoring/main/post-install.sh
       Args:
         - "https://github.com/perifaws/aws-parallelcluster-monitoring/tarball/main"
@@ -45,6 +46,7 @@ Scheduling:
           - Policy: arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess
       CustomActions:
         OnNodeConfigured:
+          # TODO: Update post-install.sh url after merge
           Script: https://raw.githubusercontent.com/perifaws/aws-parallelcluster-monitoring/main/post-install.sh
           Args:
             - https://github.com/perifaws/aws-parallelcluster-monitoring/tarball/main
