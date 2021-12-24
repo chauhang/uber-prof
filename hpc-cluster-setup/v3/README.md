@@ -39,8 +39,8 @@ upload: ./post-install.sh to s3://mlbucket-057bf1b1/post-install.sh
 ## Create key-pair for hpc cluster
 
 ```bash
-aws ec2 create-key-pair --key-name dist-ml-key --query KeyMaterial --output text > ~/.ssh/dist-ml-key
-chmod 600 ~/.ssh/dist-ml-key
+aws ec2 create-key-pair --key-name hpc-key --query KeyMaterial --output text > ~/.ssh/hpc-key
+chmod 600 ~/.ssh/hpc-key
 ```
 
 ## Edit cluster config yaml
@@ -69,4 +69,20 @@ Output
     "clusterStatus": "CREATE_IN_PROGRESS"
   }
 }
+```
+
+## Create a IAM user account
+
+Create an IAM user account with programmatic credentials and assign the AWS Managed Policy `AmazonEC2ReadOnlyAccess`
+
+## Modify the prometheus.yaml
+
+1. Update prom-config-example.yaml with region and accesskey, secretkey from above created user account.
+2. Ssh into head node
+3. Replace the contents of `/home/ec2-user/aws-parallelcluster-monitoring/prometheus` with updated prom-config-example.yaml
+
+## Restart docker compose
+
+```bash
+docker-compose --env-file /etc/parallelcluster/cfnconfig -f ~/aws-parallelcluster-monitoring/docker-compose/docker-compose.master.yml -p monitoring-master restart
 ```
