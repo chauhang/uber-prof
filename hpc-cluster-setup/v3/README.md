@@ -58,11 +58,15 @@ pcluster create-cluster --cluster-name  my-hpc-cluster --cluster-configuration c
 
 Output
 
-```bash
-Beginning cluster creation for cluster: my-hpc-cluster
-Creating stack named: parallelcluster-my-hpc-cluster
-Status: parallelcluster-my-hpc-cluster - CREATE_COMPLETE                   
-MasterPublicIP: 34.226.164.116
-ClusterUser: ec2-user
-MasterPrivateIP: 172.31.32.61
+```json
+{
+  "cluster": {
+    "clusterName": "my-hpc-cluster",
+    "cloudformationStackStatus": "CREATE_IN_PROGRESS",
+    "cloudformationStackArn": "arn:aws:cloudformation:us-west-2:379740236983:stack/my-hpc-cluster/dc43a000-640b-11ec-846b-0a803e033d61",
+    "region": "us-west-2",
+    "version": "3.0.2",
+    "clusterStatus": "CREATE_IN_PROGRESS"
+  }
+}
 ```

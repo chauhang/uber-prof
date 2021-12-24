@@ -19,9 +19,9 @@ HeadNode:
     KeyName: dist-ml-key
   CustomActions:
     OnNodeConfigured:
-      Script: s3://mlbucket-057bf1b1/post-install.sh
+      Script: https://raw.githubusercontent.com/perifaws/aws-parallelcluster-monitoring/main/post-install.sh
       Args:
-        - "https://github.com/perifaws/aws-parallelcluster-monitoring/tarball/main"
+        - https://github.com/perifaws/aws-parallelcluster-monitoring/tarball/main
         - aws-parallelcluster-monitoring
         - install-monitoring.sh
 Scheduling:

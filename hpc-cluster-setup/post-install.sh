@@ -28,7 +28,7 @@ if [ -d "$CUDA_DIRECTORY" ] && [ -d "$EFA_DIRECTORY" ]; then
     cd $AWS_OFI_DIRECTORY || exit
     ./autogen.sh
     ./configure --with-mpi=$OPENMPI_DIRECTORY --with-libfabric=$EFA_DIRECTORY --with-nccl=$NCCL_DIRECTORY/build --with-cuda=$CUDA_DIRECTORY
-    export PATH=$OPENMPI_DIRECTORY/bin:\$PATH
+    export PATH=$OPENMPI_DIRECTORY/bin:$PATH
     make
     sudo make install
 fi
@@ -60,26 +60,7 @@ cd $DCMG_EXPORTER_DIRECTORY || exit
 make binary
 sudo make install
 dcgm-exporter &
- 
-# configuring the conda environment
-cd /shared || exit
-CONDA_DIRECTORY=/shared/.conda/bin
- 
-if [ ! -d "$CONDA_DIRECTORY" ]; then
-  # control will enter here if $CONDA_DIRECTORY doesn't exist.
-  echo "Conda installation not found. Installing..."
-  wget -O miniconda.sh "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" && bash miniconda.sh -b -p /shared/.conda && /shared/.conda/bin/conda init bash && eval "$(/shared/.conda/bin/conda shell.bash hook)" && rm -rf miniconda.sh
- 
-  conda install python=3.6 -y
-fi
 
-pip3 install --install-dir /home/ec2-user torch pytorch-lightning -y
-
-chown -R ec2-user:ec2-user /lustre
-chown -R ec2-user:ec2-user /shared
-
-sudo -u ec2-user /shared/.conda/bin/conda init bash
- 
 #Load AWS Parallelcluster environment variables
 . /etc/parallelcluster/cfnconfig
 
@@ -104,3 +85,22 @@ esac
 #Execute the monitoring installation script
 bash -x "${monitoring_home}/parallelcluster-setup/${setup_command}" >/tmp/monitoring-setup.log 2>&1
 exit $?
+
+# configuring the conda environment
+cd /shared || exit
+CONDA_DIRECTORY=/shared/.conda/bin
+ 
+if [ ! -d "$CONDA_DIRECTORY" ]; then
+  # control will enter here if $CONDA_DIRECTORY doesn't exist.
+  echo "Conda installation not found. Installing..."
+  wget -O miniconda.sh "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" && bash miniconda.sh -b -p /shared/.conda && /shared/.conda/bin/conda init bash && eval "$(/shared/.conda/bin/conda shell.bash hook)" && rm -rf miniconda.sh
+ 
+  conda install python=3.6 -y
+fi
+
+pip3 install --install-dir /home/ec2-user torch pytorch-lightning -y
+
+chown -R ec2-user:ec2-user /lustre
+chown -R ec2-user:ec2-user /shared
+
+sudo -u ec2-user /shared/.conda/bin/conda init bash
