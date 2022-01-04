@@ -86,3 +86,11 @@ Create an IAM user account with programmatic credentials and assign the AWS Mana
 ```bash
 docker-compose --env-file /etc/parallelcluster/cfnconfig -f ~/aws-parallelcluster-monitoring/docker-compose/docker-compose.master.yml -p monitoring-master restart
 ```
+
+## For Standalone DCGM Exported
+
+Import the below dashboard into grafana
+
+https://grafana.com/grafana/dashboards/12239
+
+## [EFA Supported Instance Types](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa.html#efa-instance-types)

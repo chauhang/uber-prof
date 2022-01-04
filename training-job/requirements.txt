@@ -1,0 +1,6 @@
+numpy
+pandas
+sklearn
+pytorch_lightning
+transformers
+torchtext

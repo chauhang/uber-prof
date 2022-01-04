@@ -9,6 +9,14 @@ chmod +x job_epilog.sh
 chmox +x bert.sh
 ```
 
+## Install required packages
+
+Navigate to training-job folder and install packages in headnode
+
+```bash
+pip3 install -r requirements.txt
+```
+
 ## Change model parameters
 
 Modify model parameters in `bert.sh` file
