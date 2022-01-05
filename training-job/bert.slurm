@@ -20,11 +20,14 @@ echo "MASTER_ADDR="$MASTER_ADDR
 
 # debugging flags (optional)
 export NCCL_DEBUG=INFO
+export NCCL_DEBUG_SUBSYS=ALL
 export PYTHONFAULTHANDLER=1
 
 # on your cluster you might need these:
 # set the network interface
-# export NCCL_SOCKET_IFNAME=^docker0,lo
+# export NCCL_SOCKET_IFNAME=eth0
+# export NCCL_IB_DISABLE=1
+# export NCCL_P2P_DISABLE=1
 
 ### the command to run
 dcgmi profile --pause
