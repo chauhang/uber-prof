@@ -74,7 +74,9 @@ case ${cfn_node_type} in
         tar xvf ${monitoring_tarball} -C ${monitoring_home} --strip-components 1
     ;;
     ComputeFleet)
-    
+        # export cuda paths
+        export PATH="/usr/local/cuda/bin:$PATH"
+        export LD_LIBRARY_PATH="/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
     ;;
 esac
 
