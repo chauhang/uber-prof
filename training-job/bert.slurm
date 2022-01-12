@@ -26,8 +26,10 @@ export PYTHONFAULTHANDLER=1
 # on your cluster you might need these:
 # set the network interface
 export NCCL_SOCKET_IFNAME="en,eth,em,bond"
-export NCCL_IB_DISABLE=1
-export NCCL_P2P_DISABLE=1
+
+# uncommet for using IP sockets
+# export NCCL_IB_DISABLE=1
+# export NCCL_P2P_DISABLE=1
 
 ### the command to run
 dcgmi profile --pause
