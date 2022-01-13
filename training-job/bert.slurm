@@ -4,6 +4,7 @@
 #SBATCH --nodes=2
 #SBATCH --ntasks-per-node=8
 #SBATCH --gres=gpu:8
+#SBATCH --mem=0
 #SBATCH --signal=SIGUSR1@90
 
 ### change 5-digit MASTER_PORT as you wish, slurm will raise Error if duplicated with others
@@ -22,6 +23,9 @@ echo "MASTER_ADDR="$MASTER_ADDR
 export NCCL_DEBUG=INFO
 export NCCL_DEBUG_SUBSYS=ALL
 export PYTHONFAULTHANDLER=1
+
+export LD_LIBRARY_PATH=/opt/amazon/efa/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/usr/local/lib/:$LD_LIBRARY_PATH
 
 # on your cluster you might need these:
 # set the network interface
