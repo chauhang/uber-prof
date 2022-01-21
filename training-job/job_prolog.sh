@@ -21,11 +21,10 @@ if [ $? -eq 0 ]; then
   ### This sets actions and validations for events like PCIe/NVLINK Errors, ECC Errors, Page Retirement Limit,
   ### Power Excursions, Thermal Excursions and XIDs
   sudo -u "$SLURM_JOB_USER" dcgmi policy -g "$groupid" --set 1,1 -x -n -p -e
-  ### Register Policy and Start listening for violations
-  sudo -u "$SLURM_JOB_USER" dcgmi policy -g "$groupid" --reg
   ### Run a quick invasive Health Check ###
   sudo -u "$SLURM_JOB_USER" dcgmi diag -g "$groupid" -r 1
   ### Start Recording Statistics ###
   sudo -u "$SLURM_JOB_USER" dcgmi stats -g "$groupid" -s "$SLURM_JOBID"
+  ### Register Policy and Start listening for violations
+  sudo -u "$SLURM_JOB_USER" dcgmi policy -g "$groupid" --reg &
 fi
-

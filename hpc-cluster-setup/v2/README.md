@@ -17,19 +17,32 @@
 
 Note: This document uses aws-parallelcluster version 2.
 
-## Upload post-install script
+## Create s3 bucket
 
 ```bash
 export BUCKET_POSTFIX=$(uuidgen --random | cut -d'-' -f1)
 echo "Your bucket name will be mlbucket-${BUCKET_POSTFIX}"
-aws s3 mb s3://mlbucket-${BUCKET_POSTFIX}
+aws s3 mb s3://mlbucket-${BUCKET_POSTFIX} --region us-west-2
+```
+
+Output:
+
+```bash
+make_bucket: s3://mybucket-057bf1b1
+```
+
+## Upload post-install script
+
+```bash
+aws s3 cp post-install.sh s3://mlbucket-${BUCKET_POSTFIX}
+upload: ./post-install.sh to s3://mlbucket-057bf1b1/post-install.sh
 ```
 
 ## Create key-pair for hpc cluster
 
 ```bash
-aws ec2 create-key-pair --key-name dist-ml-key --query KeyMaterial --output text > ~/.ssh/my-hpc-cluster-key
-chmod 600 ~/.ssh/my-hpc-cluster-key
+aws ec2 create-key-pair --key-name dist-ml-key --query KeyMaterial --output text > ~/.ssh/dist-ml-key
+chmod 600 ~/.ssh/dist-ml-key
 ```
 
 ## Generate cluster config
@@ -37,6 +50,31 @@ chmod 600 ~/.ssh/my-hpc-cluster-key
 ```bash
 # Add executable permission to gen_cluster_config.sh script
 chmod +x gen_cluster_config.sh
+
+# Modify the below section in gen_cluster_config.sh to suit your requirement
+cat > cluster.ini << EOF
+[aws]
+aws_region_name = ${REGION}
+...
+...
+...
+[aliases]
+ssh = ssh {CFN_USER}@{MASTER_IP} {ARGS}
+
+EOF
+```
+
+### Refer: [Cluster configuration v2](https://docs.aws.amazon.com/parallelcluster/latest/ug/configuration.html)
+
+## Create cluster.ini file
+
+```bash
+./gen_cluster_config.sh
+```
+
+## Create HPC cluster
+
+```bash
 # Create hpc cluster
 pcluster create my-hpc-cluster -c cluster.ini
 ```

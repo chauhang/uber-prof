@@ -31,7 +31,8 @@ def get_20newsgroups(num_samples):
 
 def get_ag_news(num_samples):
     # reading the input
-    td.AG_NEWS(root="data", split=("train", "test"))
+    if not os.path.exists('data'):
+        td.AG_NEWS(root="data", split=("train", "test"))
     train_csv_path = "data/AG_NEWS/train.csv"
     return (
         pd.read_csv(train_csv_path, usecols=[0, 2], names=["label", "description"])
@@ -111,7 +112,7 @@ class BertDataModule(pl.LightningDataModule):
         self.tokenizer = None
         self.args = kwargs
 
-    def setup(self, stage=None):
+    def prepare_data(self):
         """
         Downloads the data, parse it and split the data into train, test, validation data
 
@@ -141,6 +142,9 @@ class BertDataModule(pl.LightningDataModule):
         self.df_train = df_train
         self.df_test = df_test
         self.df_val = df_val
+
+    def setup(self, stage=None):
+        pass
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -401,7 +405,7 @@ if __name__ == "__main__":
             dict_args["accelerator"] = None
 
     dm = BertDataModule(**dict_args)
-    dm.setup(stage="fit")
+    dm.prepare_data()
 
     model = BertNewsClassifier(**dict_args)
     early_stopping = EarlyStopping(monitor="val_loss", mode="min", verbose=True)
