@@ -20,7 +20,7 @@ if [ $? -eq 0 ]; then
   ### Add Policies ###
   ### This sets actions and validations for events like PCIe/NVLINK Errors, ECC Errors, Page Retirement Limit,
   ### Power Excursions, Thermal Excursions and XIDs
-  sudo -u "$SLURM_JOB_USER" dcgmi policy -g "$groupid" --set 1,1 -x -n -p -e
+  sudo -u "$SLURM_JOB_USER" dcgmi policy -g "$groupid" --set 1,1 -x -n -p -e -T 50 -P 270
   ### Run a quick invasive Health Check ###
   sudo -u "$SLURM_JOB_USER" dcgmi diag -g "$groupid" -r 1
   ### Start Recording Statistics ###
