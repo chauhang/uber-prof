@@ -93,4 +93,57 @@ Import the below dashboard into grafana
 
 https://grafana.com/grafana/dashboards/12239
 
+## Add Slum Job Log to Grafana
+
+### Download loki and promtail
+
+```bash
+https://github.com/grafana/loki/releases/download/v2.4.2/loki-linux-amd64.zip
+https://github.com/grafana/loki/releases/download/v2.4.2/promtail-linux-amd64.zip
+
+unzip loki-linux-amd64.zip
+unzip promtail-linux-amd64.zip
+```
+
+### Download loki and promtail configs
+
+```bash
+wget https://raw.githubusercontent.com/grafana/loki/master/cmd/loki/loki-local-config.yaml
+wget https://raw.githubusercontent.com/grafana/loki/main/clients/cmd/promtail/promtail-local-config.yaml
+```
+
+### Start loki
+
+```bash
+./loki-linux-amd64 --config.file=loki-local-config.yaml &
+```
+
+### Add the slum job output file path to promtail-local-config.yaml
+
+```bash
+  - targets:
+      - localhost
+    labels:
+      job: slurmlogs
+      __path__: /shared/uber-prof/training-job/*.out
+```
+
+### Start promtail
+
+```bash
+./promtail-linux-amd64 --config.file= promtail-local-config.yaml &
+```
+
+### Add loki datasource to Grafana
+
+![Add datasource](./images/loki_datasource.png)
+
+### Add new dashboard
+
+Add new dashboard with loki data source with logs as visualization panel.
+
+![Add dashboard datasource](./images/dashboard_datasource.png)
+
+![Add dashboard panel](./images/dashboard_panel.png)
+
 ## [EFA Supported Instance Types](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa.html#efa-instance-types)
