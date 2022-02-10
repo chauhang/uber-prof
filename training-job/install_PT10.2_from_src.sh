@@ -44,14 +44,7 @@ echo 'Building nccl'
 cd $INSTALL_ROOT/packages
 git clone https://github.com/NVIDIA/nccl.git || echo ignored
 cd nccl
-git checkout v2.11.4-1
-make -j src.build NVCC_GENCODE="-gencode=arch=compute_75,code=sm_75"
-make pkg.txz.build
-cd build/pkg/txz
-
-tar xvfJ nccl_2.11.4-1+cuda11.3_x86_64.txz
-sudo cp -r nccl_2.11.4-1+cuda11.3_x86_64/include/* /usr/local/cuda/include/
-sudo cp -r nccl_2.11.4-1+cuda11.3_x86_64/lib/* /usr/local/cuda/lib64/
+make -j src.build CUDA_HOME=/usr/local/cuda
 
 echo 'Building aws-ofi-nccl'
 cd $INSTALL_ROOT/packages
@@ -103,7 +96,7 @@ echo 'installing NCCL'
 cd $INSTALL_ROOT/packages
 git clone https://github.com/NVIDIA/nccl-tests.git || echo ignored
 cd nccl-tests
-make MPI=1 MPI_HOME=/opt/amazon/openmpi CUDA_HOME=/usr/local/cuda NCCL_HOME=/usr/local/cuda
+make MPI=1 MPI_HOME=/opt/amazon/openmpi CUDA_HOME=/usr/local/cuda NCCL_HOME=$INSTALL_ROOT/packages/nccl/build
 
 # build pytorch, follow https://github.com/pytorch/pytorch#from-source
 
@@ -147,14 +140,14 @@ python setup.py install
 # sudo yum install -y tmux
 # sudo yum install -y
 
-# echo "Testing all_reduce_perf"
-# # test all_reduce_perf
-# export CUDA_HOME=/usr/local/cuda
-# export EFA_HOME=/opt/amazon/efa
-# export MPI_HOME=/opt/amazon/openmpi
-# bin=$INSTALL_ROOT/packages/nccl-tests/build/all_reduce_perf
-# LD_LIBRARY_PATH=$CUDA_HOME/lib:$CUDA_HOME/lib64:$EFA_HOME/lib64:$MPI_HOME/lib64 $bin -b 8 -e 8
+echo "Testing all_reduce_perf"
+# test all_reduce_perf
+export CUDA_HOME=/usr/local/cuda
+export EFA_HOME=/opt/amazon/efa
+export MPI_HOME=/opt/amazon/openmpi
+bin=$INSTALL_ROOT/packages/nccl-tests/build/all_reduce_perf
+LD_LIBRARY_PATH=$CUDA_HOME/lib:$CUDA_HOME/lib64:$EFA_HOME/lib64:$MPI_HOME/lib64:$INSTALL_ROOT/packages/nccl/build/lib $bin -b 8 -e 8
 
-# # test MPI EFA
-# echo "Testing mpirun"
-# /opt/amazon/openmpi/bin/mpirun -n 8 -x NCCL_DEBUG=INFO -x FI_PROVIDER=efa -x LD_LIBRARY_PATH=$CUDA_HOME/lib:$CUDA_HOME/lib64:$EFA_HOME/lib64:$MPI_HOME/lib64 $bin -b 8 -e 8
+# test MPI EFA
+echo "Testing mpirun"
+/opt/amazon/openmpi/bin/mpirun -n 8 -x NCCL_DEBUG=INFO -x FI_PROVIDER=efa -x LD_LIBRARY_PATH=$CUDA_HOME/lib:$CUDA_HOME/lib64:$EFA_HOME/lib64:/opt/amazon/openmpi/lib64:$INSTALL_ROOT/packages/nccl/build/lib $INSTALL_ROOT/packages/nccl-tests/build/all_reduce_perf -b 8 -e 8
