@@ -23,7 +23,7 @@ HeadNode:
     AllowedIps: 0.0.0.0/0  
   CustomActions:
     OnNodeConfigured:
-      Script: s3://mlbucket-057bf1b1/post-install.sh
+      Script: s3://mlbucket-057bf1b1/head-post-install.sh
       Args:
         - https://github.com/perifaws/aws-parallelcluster-monitoring/tarball/main
         - aws-parallelcluster-monitoring
@@ -53,11 +53,7 @@ Scheduling:
           - Policy: arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess
       CustomActions:
         OnNodeConfigured:
-          Script: s3://mlbucket-057bf1b1/post-install.sh
-          Args:
-            - https://github.com/perifaws/aws-parallelcluster-monitoring/tarball/main
-            - aws-parallelcluster-monitoring
-            - install-monitoring.sh
+          Script: s3://mlbucket-057bf1b1/compute-post-install.sh
 Tags:
   - Key: "Grafana"
     Value: "true"
