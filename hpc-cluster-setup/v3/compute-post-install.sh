@@ -142,32 +142,15 @@ sudo rpm -i datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
 # Start nv-hostengine
 sudo -u root nv-hostengine -b 0
 
-# build pytorch, follow https://github.com/pytorch/pytorch#from-source
+source /lustre/.conda/etc/profile.d/conda.sh 
+conda activate
 
-# export PATH=$HOME/anaconda3/bin:$PATH
-# eval "$(conda shell.bash hook)"
-source /lustre/.conda/etc/profile.d/conda.sh                                                                                                                                           
-conda activate base
-
-echo "Installing PyTorch dependencies"
-conda install -y astunparse numpy ninja pyyaml mkl mkl-include setuptools cmake cffi typing_extensions future six requests dataclasses
-conda install -c pytorch magma-cuda113 -y
-
-cd $INSTALL_ROOT/packages
-export USE_SYSTEM_NCCL=1
-git clone --recursive https://github.com/pytorch/pytorch
-cd pytorch
-git checkout release/1.10
-git submodule sync
-git submodule update --init --recursive
-
-export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
-
-python setup.py install
-
-echo "Installing Torchtext"
-git clone https://github.com/pytorch/text torchtext
-cd torchtext
-git checkout release/0.11
-git submodule update --init --recursive
-python setup.py clean install
+cat >> ~/.bashrc << EOF
+export PATH=/usr/local/cuda/bin:/lustre/.conda/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
+export CUDNN_INCLUDE_DIR="/usr/local/cuda/include"
+export CUDNN_LIB_DIR="/usr/local/cuda/lib64"
+export OMP_NUM_THREADS=1
+export CUDA_NVCC_EXECUTABLE=/usr/local/cuda/bin/nvcc
+EOF
