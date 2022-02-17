@@ -24,6 +24,8 @@ export NCCL_DEBUG=INFO
 export NCCL_DEBUG_SUBSYS=ALL
 export PYTHONFAULTHANDLER=1
 
+export FI_PROVIDER="efa"
+
 export LD_LIBRARY_PATH=/opt/amazon/efa/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/usr/local/lib/:$LD_LIBRARY_PATH
 
