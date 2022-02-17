@@ -32,9 +32,14 @@ make_bucket: s3://mybucket-057bf1b1
 ## Upload post-install script
 
 ```bash
-aws s3 cp post-install.sh s3://mlbucket-${BUCKET_POSTFIX}
-upload: ./post-install.sh to s3://mlbucket-057bf1b1/post-install.sh
+aws s3 cp head-post-install.sh s3://mlbucket-${BUCKET_POSTFIX}
+upload: ./post-install.sh to s3://mlbucket-057bf1b1/head-post-install.sh
+
+aws s3 cp compute-post-install.sh s3://mlbucket-${BUCKET_POSTFIX}
+upload: ./post-install.sh to s3://mlbucket-057bf1b1/compute-post-install.sh
 ```
+
+Add read permission to the scripts in s3.
 
 ## Create key-pair for hpc cluster
 
