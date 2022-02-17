@@ -4,6 +4,7 @@ echo "Installing PyTorch dependencies"
 conda install -y astunparse numpy ninja pyyaml mkl mkl-include setuptools cmake cffi typing_extensions future six requests dataclasses
 conda install -c pytorch magma-cuda113 -y
 
+mkdir -p ${HOME}/packages
 cd ${HOME}/packages
 export USE_SYSTEM_NCCL=1
 git clone --recursive https://github.com/pytorch/pytorch
