@@ -39,7 +39,8 @@ aws s3 cp compute-post-install.sh s3://mlbucket-${BUCKET_POSTFIX}
 upload: ./post-install.sh to s3://mlbucket-057bf1b1/compute-post-install.sh
 ```
 
-Add read permission to the scripts in s3.
+Note: *Add read permission to the scripts in s3. Make sure to change CC version in compute-post-install.sh*
+
 
 ## Create key-pair for hpc cluster
 

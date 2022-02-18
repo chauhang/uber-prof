@@ -3,52 +3,49 @@
 # https://github.com/cybertronai/aws-network-benchmarks
 # Note: This script is tested on Alinux2 runnin on GPU instance with Tesla volta arch.
 
-if [ -z ${INSTALL_ROOT+x} ]; then
-    export INSTALL_ROOT=${HOME}
-    echo "using default install root $INSTALL_ROOT"
-else
-    echo "using custom install root $INSTALL_ROOT"
-fi
-
 sudo yum update -y
 sudo yum groupinstall "Development Tools" -y
 
-mkdir -p $INSTALL_ROOT/packages
-cd $INSTALL_ROOT/packages
+export INSTALL_ROOT=${HOME}
+export PATH="/usr/local/cuda/bin:$PATH"
+export LD_LIBRARY_PATH="/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
+
+mkdir -p "$INSTALL_ROOT"/packages
+cd "$INSTALL_ROOT"/packages || exit
 
 export EFA_INSTALLER_FN=aws-efa-installer-latest.tar.gz
 echo "Installing EFA " $EFA_INSTALLER_FN
 
 wget https://s3-us-west-2.amazonaws.com/aws-efa-installer/$EFA_INSTALLER_FN
 tar -xf $EFA_INSTALLER_FN
-cd aws-efa-installer
+cd aws-efa-installer || exit
 sudo ./efa_installer.sh -y
 
 # echo "Installing CUDA"
-cd $INSTALL_ROOT/packages
+cd "$INSTALL_ROOT"/packages || exit
 wget https://developer.download.nvidia.com/compute/cuda/11.3.0/local_installers/cuda_11.3.0_465.19.01_linux.run
 chmod +x cuda_11.3.0_465.19.01_linux.run
 sudo ./cuda_11.3.0_465.19.01_linux.run --silent --override --toolkit --samples --no-opengl-libs
 
 echo 'Building nccl'
-cd $INSTALL_ROOT/packages
+cd "$INSTALL_ROOT"/packages || exit
 git clone https://github.com/NVIDIA/nccl.git || echo ignored
-cd nccl
+cd nccl || exit
 git checkout tags/v2.11.4-1 -b v2.11.4-1
-# Choose compute capability 70 for Tesla V100
+# Choose compute capability 70 for Tesla V100 and 80 for Tesla A100
 # Refer https://en.wikipedia.org/wiki/CUDA#Supported_GPUs for different architecture 
 make -j src.build NVCC_GENCODE="-gencode=arch=compute_70,code=sm_70"
 make pkg.txz.build
-cd build/pkg/txz
+cd build/pkg/txz || exit
 
 tar xvfJ nccl_2.11.4-1+cuda11.3_x86_64.txz
 sudo cp -r nccl_2.11.4-1+cuda11.3_x86_64/include/* /usr/local/cuda/include/
 sudo cp -r nccl_2.11.4-1+cuda11.3_x86_64/lib/* /usr/local/cuda/lib64/
 
 echo 'Building aws-ofi-nccl'
-cd $INSTALL_ROOT/packages
+cd "$INSTALL_ROOT"/packages || exit
 git clone https://github.com/aws/aws-ofi-nccl.git || echo exists
-cd aws-ofi-nccl
+cd aws-ofi-nccl || exit
 git checkout aws
 git pull
 ./autogen.sh
@@ -63,7 +60,7 @@ echo 'Installing bazel'
 sudo update-alternatives --set gcc "/usr/bin/gcc48"
 sudo update-alternatives --set g++ "/usr/bin/g++48"
 
-cd $INSTALL_ROOT/packages
+cd "$INSTALL_ROOT"/packages || exit
 echo 'downloading bazel'
 wget https://github.com/bazelbuild/bazel/releases/download/5.0.0/bazel-5.0.0-installer-linux-x86_64.sh
 sudo bash bazel-5.0.0-installer-linux-x86_64.sh
@@ -73,16 +70,16 @@ sudo sh -c 'echo "$INSTALL_ROOT/packages/nccl/build/lib/" > nccl.conf'
 sudo sh -c 'echo "/usr/local/cuda/lib64/" > cuda.conf'
 sudo ldconfig
 
-cd /usr/local/lib
+cd /usr/local/lib || exit
 sudo rm -f ./libmpi.so
 sudo ln -s /opt/amazon/openmpi/lib64/libmpi.so ./libmpi.s
 
 
 echo 'installing NCCL'
-cd $INSTALL_ROOT/packages
+cd "$INSTALL_ROOT"/packages || exit
 git clone https://github.com/NVIDIA/nccl-tests.git || echo ignored
-cd nccl-tests
-make MPI=1 MPI_HOME=/opt/amazon/openmpi CUDA_HOME=/usr/local/cuda NCCL_HOME=$INSTALL_ROOT/packages/nccl/build
+cd nccl-tests || exit
+make MPI=1 MPI_HOME=/opt/amazon/openmpi CUDA_HOME=/usr/local/cuda NCCL_HOME="$INSTALL_ROOT"/packages/nccl/build
 
 echo "Installing additional packages"
 wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
