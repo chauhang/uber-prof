@@ -34,7 +34,7 @@ cd nccl || exit
 git checkout tags/v2.11.4-1 -b v2.11.4-1
 # Choose compute capability 70 for Tesla V100 and 80 for Tesla A100
 # Refer https://en.wikipedia.org/wiki/CUDA#Supported_GPUs for different architecture 
-make -j src.build NVCC_GENCODE="-gencode=arch=compute_70,code=sm_70"
+make -j src.build NVCC_GENCODE="-gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_80,code=sm_80"
 make pkg.txz.build
 cd build/pkg/txz || exit
 
@@ -149,5 +149,7 @@ export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 export CUDNN_INCLUDE_DIR="/usr/local/cuda/include"
 export CUDNN_LIB_DIR="/usr/local/cuda/lib64"
 export OMP_NUM_THREADS=1
+export EFA_HOME=/opt/amazon/efa
+export MPI_HOME=/opt/amazon/openmpi
 export CUDA_NVCC_EXECUTABLE=/usr/local/cuda/bin/nvcc
 EOF
