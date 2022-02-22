@@ -394,7 +394,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--save_every_n_epoch", default=2, type=int, help="Number of epochs between checkpoints"
+        "--save_every_n_epoch", default=5, type=int, help="Number of epochs between checkpoints"
     )
 
     parser = pl.Trainer.add_argparse_args(parent_parser=parser)
