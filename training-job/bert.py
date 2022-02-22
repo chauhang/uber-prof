@@ -2,6 +2,7 @@
 # pylint: disable=unused-argument
 # pylint: disable=abstract-method
 
+import glob
 import os
 from argparse import ArgumentParser
 import numpy as np
@@ -392,6 +393,10 @@ if __name__ == "__main__":
         choices=["20newsgroups", "ag_news"],
     )
 
+    parser.add_argument(
+        "--save_every_n_epoch", default=2, type=int, help="Number of epochs between checkpoints"
+    )
+
     parser = pl.Trainer.add_argparse_args(parent_parser=parser)
     parser = BertNewsClassifier.add_model_specific_args(parent_parser=parser)
     parser = BertDataModule.add_model_specific_args(parent_parser=parser)
@@ -411,17 +416,42 @@ if __name__ == "__main__":
     early_stopping = EarlyStopping(monitor="val_loss", mode="min", verbose=True)
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath=os.getcwd(),
-        save_top_k=1,
-        verbose=True,
-        monitor="val_loss",
-        mode="min",
+        dirpath=os.getcwd(), every_n_epochs=dict_args["save_every_n_epoch"],
     )
     lr_logger = LearningRateMonitor()
 
-    trainer = pl.Trainer.from_argparse_args(
-        args, callbacks=[lr_logger, early_stopping, checkpoint_callback], checkpoint_callback=True
-    )
+    checkpoint_list = glob.glob("epoch=*-step=*.ckpt")
+    resume_from_checkpoint = False
+    is_checkpoint_exists = len(checkpoint_list) == 1
+    print("is checkpoint exists: ", is_checkpoint_exists)
+
+    if is_checkpoint_exists:
+        response = input(
+            "Checkpoint {} exists. Do you want to resume from checkpoint? (y/n)".format(
+                checkpoint_list[0]
+            )
+        )
+        if response == "y":
+            resume_from_checkpoint = True
+        elif response == "n":
+            resume_from_checkpoint = False
+        else:
+            raise ValueError("Invalid input")
+
+    if resume_from_checkpoint:
+        trainer = pl.Trainer.from_argparse_args(
+            args,
+            callbacks=[lr_logger, early_stopping, checkpoint_callback],
+            resume_from_checkpoint=checkpoint_list[0],
+            checkpoint_callback=True,
+        )
+    else:
+        trainer = pl.Trainer.from_argparse_args(
+            args,
+            callbacks=[lr_logger, early_stopping, checkpoint_callback],
+            checkpoint_callback=True,
+        )
+
     trainer.fit(model, dm)
 
 
