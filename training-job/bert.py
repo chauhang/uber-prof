@@ -397,6 +397,10 @@ if __name__ == "__main__":
         "--save_every_n_epoch", default=5, type=int, help="Number of epochs between checkpoints"
     )
 
+    parser.add_argument(
+        "--resume", default=False, type=bool, help="Set to True for resuming from previous checkpoint"
+    )
+
     parser = pl.Trainer.add_argparse_args(parent_parser=parser)
     parser = BertNewsClassifier.add_model_specific_args(parent_parser=parser)
     parser = BertDataModule.add_model_specific_args(parent_parser=parser)
@@ -420,31 +424,22 @@ if __name__ == "__main__":
     )
     lr_logger = LearningRateMonitor()
 
-    checkpoint_list = glob.glob("epoch=*-step=*.ckpt")
     resume_from_checkpoint = False
-    is_checkpoint_exists = len(checkpoint_list) == 1
-    print("is checkpoint exists: ", is_checkpoint_exists)
 
-    if is_checkpoint_exists:
-        response = input(
-            "Checkpoint {} exists. Do you want to resume from checkpoint? (y/n)".format(
-                checkpoint_list[0]
-            )
-        )
-        if response == "y":
-            resume_from_checkpoint = True
-        elif response == "n":
-            resume_from_checkpoint = False
-        else:
-            raise ValueError("Invalid input")
+    if dict_args["resume"]:
+        resume_from_checkpoint = True
 
     if resume_from_checkpoint:
-        trainer = pl.Trainer.from_argparse_args(
-            args,
-            callbacks=[lr_logger, early_stopping, checkpoint_callback],
-            resume_from_checkpoint=checkpoint_list[0],
-            checkpoint_callback=True,
-        )
+        checkpoint_list = glob.glob("epoch=*-step=*.ckpt")
+        if len(checkpoint_list) == 0:
+            raise Exception("Checkpoint doesn't exist")
+        else:
+            trainer = pl.Trainer.from_argparse_args(
+                args,
+                callbacks=[lr_logger, early_stopping, checkpoint_callback],
+                resume_from_checkpoint=checkpoint_list[0],
+                checkpoint_callback=True,
+            )
     else:
         trainer = pl.Trainer.from_argparse_args(
             args,
