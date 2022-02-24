@@ -33,7 +33,7 @@ git clone https://github.com/NVIDIA/nccl.git || echo ignored
 cd nccl || exit
 git checkout tags/v2.11.4-1 -b v2.11.4-1
 # Choose compute capability 70 for Tesla V100 and 80 for Tesla A100
-# Refer https://en.wikipedia.org/wiki/CUDA#Supported_GPUs for different architecture 
+# Refer https://en.wikipedia.org/wiki/CUDA#Supported_GPUs for different architecture
 make -j src.build NVCC_GENCODE="-gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_80,code=sm_80"
 make pkg.txz.build
 cd build/pkg/txz || exit
@@ -95,7 +95,7 @@ sudo yum install -y
 echo "================================"
 echo "===========Check EFA============"
 echo "================================"
-fi_info -p efa -t FI_EP_RDM
+FI_EFA_USE_DEVICE_RDMA=1 fi_info -c FI_HMEM -p efa
 
 echo "================================"
 echo "====Testing all_reduce_perf====="
@@ -139,10 +139,10 @@ sudo rpm -i datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
 # Start nv-hostengine
 sudo -u root nv-hostengine -b 0
 
-source /lustre/.conda/etc/profile.d/conda.sh 
+source /lustre/.conda/etc/profile.d/conda.sh
 conda activate
 
-cat >> ~/.bashrc << EOF
+cat > ~/.bashrc << EOF
 export PATH=/usr/local/cuda/bin:/lustre/.conda/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
@@ -153,3 +153,30 @@ export EFA_HOME=/opt/amazon/efa
 export MPI_HOME=/opt/amazon/openmpi
 export CUDA_NVCC_EXECUTABLE=/usr/local/cuda/bin/nvcc
 EOF
+
+#Load AWS Parallelcluster environment variables
+. /etc/parallelcluster/cfnconfig
+
+#get GitHub repo to clone and the installation script
+monitoring_url=${cfn_postinstall_args[0]}
+monitoring_dir_name=${cfn_postinstall_args[1]}
+monitoring_tarball="${monitoring_dir_name}.tar.gz"
+setup_command=${cfn_postinstall_args[2]}
+monitoring_home="/home/${cfn_cluster_user}/${monitoring_dir_name}"
+
+case ${cfn_node_type} in
+    HeadNode)
+        wget ${monitoring_url} -O ${monitoring_tarball}
+        mkdir -p ${monitoring_home}
+        tar xvf ${monitoring_tarball} -C ${monitoring_home} --strip-components 1
+    ;;
+    ComputeFleet)
+        # export cuda paths
+        export PATH="/usr/local/cuda/bin:$PATH"
+        export LD_LIBRARY_PATH="/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
+    ;;
+esac
+
+#Execute the monitoring installation script
+bash -x "${monitoring_home}/parallelcluster-setup/${setup_command}" >/tmp/monitoring-setup.log 2>&1
+exit $?

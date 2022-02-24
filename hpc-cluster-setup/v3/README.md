@@ -29,6 +29,33 @@ Output:
 make_bucket: s3://mybucket-057bf1b1
 ```
 
+## Generate the policy
+
+cat > policy_s3_access.json << EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ListObjectsInBucket",
+            "Effect": "Allow",
+            "Action": ["s3:ListBucket"],
+            "Resource": ["arn:aws:s3:::$BUCKET"]
+        },
+        {
+            "Sid": "GetObjectActions",
+            "Effect": "Allow",
+            "Action": "s3:GetObject",
+            "Resource": ["arn:aws:s3:::$BUCKET/*"]
+        }
+    ]
+}
+EOF
+
+## Deploy the policy
+
+aws iam create-policy --policy-name ParallelClusterS3BucketPolicyCustomAMI${BUCKET_POSTFIX} \
+    --policy-document file://policy_s3_access.json
+
 ## Upload post-install script
 
 ```bash
@@ -40,7 +67,6 @@ upload: ./post-install.sh to s3://mlbucket-057bf1b1/compute-post-install.sh
 ```
 
 Note: *Add read permission to the scripts in s3. Make sure to change CC version in compute-post-install.sh*
-
 
 ## Create key-pair for hpc cluster
 
@@ -97,15 +123,15 @@ docker-compose --env-file /etc/parallelcluster/cfnconfig -f ~/aws-parallelcluste
 
 Import the below dashboard into grafana
 
-https://grafana.com/grafana/dashboards/12239
+<https://grafana.com/grafana/dashboards/12239>
 
 ## Add Slum Job Log to Grafana
 
 ### Download loki and promtail
 
 ```bash
-https://github.com/grafana/loki/releases/download/v2.4.2/loki-linux-amd64.zip
-https://github.com/grafana/loki/releases/download/v2.4.2/promtail-linux-amd64.zip
+wget https://github.com/grafana/loki/releases/download/v2.4.2/loki-linux-amd64.zip
+wget https://github.com/grafana/loki/releases/download/v2.4.2/promtail-linux-amd64.zip
 
 unzip loki-linux-amd64.zip
 unzip promtail-linux-amd64.zip
@@ -131,13 +157,13 @@ wget https://raw.githubusercontent.com/grafana/loki/main/clients/cmd/promtail/pr
       - localhost
     labels:
       job: slurmlogs
-      __path__: /shared/uber-prof/training-job/*.out
+      __path__: /lustre/uber-prof/training-job/*.out
 ```
 
 ### Start promtail
 
 ```bash
-./promtail-linux-amd64 --config.file= promtail-local-config.yaml &
+./promtail-linux-amd64 --config.file=promtail-local-config.yaml &
 ```
 
 ### Add loki datasource to Grafana

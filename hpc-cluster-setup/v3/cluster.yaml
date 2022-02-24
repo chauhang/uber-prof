@@ -1,26 +1,28 @@
-Region: us-west-2                                                                                                                                                                      
-Image:          
-  Os: alinux2   
-HeadNode:       
-  InstanceType: m5dn.24xlarge                                                                                                                                                             
-  Iam:          
-    AdditionalIamPolicies:                                                                                                                                                             
-      - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore                                                                                                                   
-      - Policy: arn:aws:iam::aws:policy/CloudWatchFullAccess                                                                                                                           
-      - Policy: arn:aws:iam::aws:policy/AWSPriceListServiceFullAccess                                                                                                                  
-      - Policy: arn:aws:iam::aws:policy/AmazonSSMFullAccess                                                                                                                            
-      - Policy: arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess                                                                                                                
-  LocalStorage: 
-    RootVolume: 
-      Size: 35  
-  Networking:   
-    SubnetId: subnet-861deddb                                                                                                                                                          
-  Ssh:          
+Region: us-west-2
+Image:
+  Os: alinux2
+HeadNode:
+  InstanceType: c5.9xlarge
+  Iam:
+    AdditionalIamPolicies:
+      - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      - Policy: arn:aws:iam::aws:policy/CloudWatchFullAccess
+      - Policy: arn:aws:iam::aws:policy/AWSPriceListServiceFullAccess
+      - Policy: arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      - Policy: arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess
+      # Add below policy for capacity reservation
+      - Policy: arn:aws:iam::379740236983:policy/RunInstancesInCapacityReservation
+  LocalStorage:
+    RootVolume:
+      Size: 150
+  Networking:
+    SubnetId: subnet-861deddb
+  Ssh:
     KeyName: hpc-key
-  Dcv:          
-    Enabled: true                                                                                                                                                                      
-    Port: 8443  
-    AllowedIps: 0.0.0.0/0  
+  Dcv:
+    Enabled: true
+    Port: 8443
+    AllowedIps: 0.0.0.0/0
   CustomActions:
     OnNodeConfigured:
       Script: s3://mlbucket-057bf1b1/head-post-install.sh
@@ -36,7 +38,7 @@ Scheduling:
         SubnetIds:
           - subnet-861deddb
         PlacementGroup:
-          Enabled: false
+          Enabled: true
       ComputeResources:
         - Name: queue0-p3dn24xlarge
           InstanceType: p3dn.24xlarge
@@ -54,6 +56,10 @@ Scheduling:
       CustomActions:
         OnNodeConfigured:
           Script: s3://mlbucket-057bf1b1/compute-post-install.sh
+          Args:
+            - https://github.com/perifaws/aws-parallelcluster-monitoring/tarball/main
+            - aws-parallelcluster-monitoring
+            - install-monitoring.sh
 Tags:
   - Key: "Grafana"
     Value: "true"

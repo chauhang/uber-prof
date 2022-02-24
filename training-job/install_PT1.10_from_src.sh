@@ -8,7 +8,7 @@ conda install -c pytorch magma-cuda113 -y
 mkdir -p "${HOME}"/packages
 cd "${HOME}"/packages || exit
 export USE_SYSTEM_NCCL=1
-export TORCH_CUDA_ARCH_LIST="7.0+PTX 8.0" 
+export TORCH_CUDA_ARCH_LIST="7.0+PTX 8.0"
 export TORCH_NVCC_FLAGS="-Xfatbin -compress-all"
 git clone --recursive https://github.com/pytorch/pytorch
 cd pytorch || exit
