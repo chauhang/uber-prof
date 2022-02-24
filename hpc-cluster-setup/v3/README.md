@@ -105,7 +105,7 @@ Output
 
 ## Create a IAM user account
 
-Create an IAM user account with programmatic credentials and assign the AWS Managed Policy `AmazonEC2ReadOnlyAccess`
+Create an IAM user account with programmatic credentials and assign the AWS Managed Policy `AmazonEC2ReadOnlyAccess`, `AmazonS3ReadOnlyAccess`, `CloudWatchLogsReadOnlyAccess`
 
 ## Modify the prometheus.yaml
 
