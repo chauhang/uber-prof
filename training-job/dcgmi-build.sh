@@ -2,6 +2,6 @@
 
 git clone https://github.com/NVIDIA/DCGM
 cd DCGM/dcgmbuild || exit
-./build.sh
+sudo ./build.sh
 cd ..
 ./build.sh -d --rpm

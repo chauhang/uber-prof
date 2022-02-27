@@ -5,6 +5,19 @@
 
 sudo yum update -y
 sudo yum groupinstall "Development Tools" -y
+sudo yum install -y wget kernel-devel-$(uname -r) kernel-headers-$(uname -r)
+# sudo yum install gcc10 kernel-devel kernel-headers -y
+
+cat << EOF | sudo tee --append /etc/modprobe.d/blacklist.conf
+blacklist vga16fb
+blacklist nouveau
+blacklist rivafb
+blacklist nvidiafb
+blacklist rivatv
+EOF
+
+GRUB_CMDLINE_LINUX="rdblacklist=nouveau"
+sudo grub2-mkconfig -o /boot/grub2/grub.cfg
 
 export INSTALL_ROOT=${HOME}
 export PATH="/usr/local/cuda/bin:$PATH"
@@ -56,15 +69,6 @@ sudo yum install libudev-devel -y
 PATH=/opt/amazon/efa/bin:$PATH LDFLAGS="-L/opt/amazon/efa/lib64" make MPI=1 MPI_HOME=/opt/amazon/openmpi CUDA_HOME=/usr/local/cuda NCCL_HOME=$INSTALL_ROOT/packages/nccl/build
 sudo make install
 
-echo 'Installing bazel'
-sudo update-alternatives --set gcc "/usr/bin/gcc48"
-sudo update-alternatives --set g++ "/usr/bin/g++48"
-
-cd "$INSTALL_ROOT"/packages || exit
-echo 'downloading bazel'
-wget https://github.com/bazelbuild/bazel/releases/download/5.0.0/bazel-5.0.0-installer-linux-x86_64.sh
-sudo bash bazel-5.0.0-installer-linux-x86_64.sh
-
 sudo sh -c 'echo "/opt/amazon/openmpi/lib64/" > mpi.conf'
 sudo sh -c 'echo "$INSTALL_ROOT/packages/nccl/build/lib/" > nccl.conf'
 sudo sh -c 'echo "/usr/local/cuda/lib64/" > cuda.conf'
@@ -81,26 +85,7 @@ git clone https://github.com/NVIDIA/nccl-tests.git || echo ignored
 cd nccl-tests || exit
 make MPI=1 MPI_HOME=/opt/amazon/openmpi CUDA_HOME=/usr/local/cuda NCCL_HOME="$INSTALL_ROOT"/packages/nccl/build
 
-echo "Installing additional packages"
-wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
-sudo rpm -Uvh epel-release*rpm
-sudo yum install nload -y
-
-sudo yum install -y mosh
-sudo yum install -y htop
-sudo yum install -y gdb
-sudo yum install -y tmux
-sudo yum install -y
-
-echo "================================"
-echo "===========Check EFA============"
-echo "================================"
-FI_EFA_USE_DEVICE_RDMA=1 fi_info -c FI_HMEM -p efa
-
-echo "================================"
-echo "====Testing all_reduce_perf====="
-echo "================================"
-# test all_reduce_perf
+# Set Environment variables
 export CUDA_HOME=/usr/local/cuda
 export EFA_HOME=/opt/amazon/efa
 export MPI_HOME=/opt/amazon/openmpi
@@ -108,6 +93,16 @@ export FI_PROVIDER="efa"
 export NCCL_DEBUG=INFO
 export FI_EFA_USE_DEVICE_RDMA=1
 export NCCL_ALGO=ring
+
+echo "================================"
+echo "===========Check EFA============"
+echo "================================"
+fi_info -c FI_HMEM -p efa
+
+echo "================================"
+echo "====Testing all_reduce_perf====="
+echo "================================"
+# test all_reduce_perf
 bin=$INSTALL_ROOT/packages/nccl-tests/build/all_reduce_perf
 LD_LIBRARY_PATH=$CUDA_HOME/lib:$CUDA_HOME/lib64:$EFA_HOME/lib64:$MPI_HOME/lib64:$INSTALL_ROOT/packages/nccl/build/lib $bin -b 8 -e 128M -f 2 -g 8
 
@@ -131,6 +126,22 @@ echo "================================"
 #     --mca pml ^cm --mca btl tcp,self --mca btl_tcp_if_exclude lo,docker0 --bind-to none \
 #     $INSTALL_ROOT/packages/nccl-tests/build/all_reduce_perf -b 8 -e 1G -f 2 -g 1 -c 1 -n 100
 
+# Install Fabric Manager
+# nvidia_info=$(find /usr/lib/modules -name nvidia.ko)
+# nvidia_version=$(modinfo "$nvidia_info" | grep ^version | awk '{print $2}')
+# sudo yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo
+# sudo yum clean all
+# # sudo wget -O /tmp/NVIDIA-Linux-driver.run https://us.download.nvidia.com/tesla/${nvidia_version}/NVIDIA-Linux-x86_64-${nvidia_version}.run
+# # sudo CC=gcc10-cc sh /tmp/NVIDIA-Linux-driver.run -q -a --ui=none
+# sudo curl -O https://developer.download.nvidia.com/compute/nvidia-driver/redist/fabricmanager/linux-x86_64/fabricmanager-linux-x86_64-${nvidia_version}-archive.tar.xz
+# sudo tar xf fabricmanager-linux-x86_64-"${nvidia_version}"-archive.tar.xz -C /tmp
+# sudo rsync -al /tmp/fabricmanager-linux-x86_64-"${nvidia_version}"-archive/ /usr/ --exclude LICENSE
+# sudo mv /usr/systemd/nvidia-fabricmanager.service /usr/lib/systemd/system
+# sudo systemctl enable nvidia-fabricmanager && sudo systemctl start nvidia-fabricmanager
+
+# Verifying GPU Routing
+sudo nvswitch-audit
+
 # Download and Install Nvidia DCGM
 cd /lustre || exit
 wget -O datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm https://mlbucket-4d8b827c.s3.amazonaws.com/datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
@@ -138,21 +149,6 @@ sudo rpm -i datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
 
 # Start nv-hostengine
 sudo -u root nv-hostengine -b 0
-
-source /lustre/.conda/etc/profile.d/conda.sh
-conda activate
-
-cat > ~/.bashrc << EOF
-export PATH=/usr/local/cuda/bin:/lustre/.conda/bin:$PATH
-export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
-export CUDNN_INCLUDE_DIR="/usr/local/cuda/include"
-export CUDNN_LIB_DIR="/usr/local/cuda/lib64"
-export OMP_NUM_THREADS=1
-export EFA_HOME=/opt/amazon/efa
-export MPI_HOME=/opt/amazon/openmpi
-export CUDA_NVCC_EXECUTABLE=/usr/local/cuda/bin/nvcc
-EOF
 
 #Load AWS Parallelcluster environment variables
 . /etc/parallelcluster/cfnconfig
@@ -179,4 +175,34 @@ esac
 
 #Execute the monitoring installation script
 bash -x "${monitoring_home}/parallelcluster-setup/${setup_command}" >/tmp/monitoring-setup.log 2>&1
-exit $?
+
+source /lustre/.conda/etc/profile.d/conda.sh
+conda activate
+
+# Install EFA Exporter
+pip install boto3
+sudo yum install amazon-cloudwatch-agent -y
+git clone https://github.com/aws-samples/aws-efa-nccl-baseami-pipeline.git /tmp/aws-efa-nccl-baseami
+sudo mv /tmp/aws-efa-nccl-baseami/nvidia-efa-ami_base/cloudwatch /opt/aws/
+sudo mv /opt/aws/cloudwatch/aws-hw-monitor.service /lib/systemd/system
+echo -e "#!/bin/sh\n" | sudo tee /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
+echo -e "$(which python) /opt/aws/cloudwatch/nvidia/aws-hwaccel-error-parser.py &" | sudo tee -a /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
+echo -e "$(which python) /opt/aws/cloudwatch/nvidia/accel-to-cw.py /opt/aws/cloudwatch/nvidia/nvidia-exporter >> /dev/null 2>&1 &\n" | sudo tee -a /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
+echo -e "$(which python) /opt/aws/cloudwatch/efa/efa-to-cw.py /opt/aws/cloudwatch/efa/efa-exporter >> /dev/null 2>&1 &\n" | sudo tee -a /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
+sudo chmod +x /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
+sudo cp /opt/aws/cloudwatch/nvidia/cwa-config.json /opt/aws/amazon-cloudwatch-agent/bin/config.json
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
+sudo systemctl enable aws-hw-monitor.service
+sudo systemctl restart amazon-cloudwatch-agent.service
+
+cat >> ~/.bashrc << EOF
+export PATH=/usr/local/cuda/bin:/lustre/.conda/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
+export CUDNN_INCLUDE_DIR="/usr/local/cuda/include"
+export CUDNN_LIB_DIR="/usr/local/cuda/lib64"
+export OMP_NUM_THREADS=1
+export EFA_HOME=/opt/amazon/efa
+export MPI_HOME=/opt/amazon/openmpi
+export CUDA_NVCC_EXECUTABLE=/usr/local/cuda/bin/nvcc
+EOF
