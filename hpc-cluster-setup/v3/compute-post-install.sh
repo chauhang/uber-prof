@@ -3,9 +3,13 @@
 # https://github.com/cybertronai/aws-network-benchmarks
 # Note: This script is tested on Alinux2 runnin on GPU instance with Tesla volta arch.
 
+# Remove older versions of dcgm
+sudo yum remove datacenter-gpu-manager -y
+
+# Upaate packages
 sudo yum update -y
 sudo yum groupinstall "Development Tools" -y
-sudo yum install -y wget kernel-devel-$(uname -r) kernel-headers-$(uname -r)
+sudo yum install wget kernel-devel-$(uname -r) kernel-headers-$(uname -r) -y
 # sudo yum install gcc10 kernel-devel kernel-headers -y
 
 cat << EOF | sudo tee --append /etc/modprobe.d/blacklist.conf
@@ -180,15 +184,15 @@ source /lustre/.conda/etc/profile.d/conda.sh
 conda activate
 
 # Install EFA Exporter
-pip install boto3
+sudo pip3 install boto3
 sudo yum install amazon-cloudwatch-agent -y
 git clone https://github.com/aws-samples/aws-efa-nccl-baseami-pipeline.git /tmp/aws-efa-nccl-baseami
 sudo mv /tmp/aws-efa-nccl-baseami/nvidia-efa-ami_base/cloudwatch /opt/aws/
 sudo mv /opt/aws/cloudwatch/aws-hw-monitor.service /lib/systemd/system
 echo -e "#!/bin/sh\n" | sudo tee /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
-echo -e "$(which python) /opt/aws/cloudwatch/nvidia/aws-hwaccel-error-parser.py &" | sudo tee -a /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
-echo -e "$(which python) /opt/aws/cloudwatch/nvidia/accel-to-cw.py /opt/aws/cloudwatch/nvidia/nvidia-exporter >> /dev/null 2>&1 &\n" | sudo tee -a /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
-echo -e "$(which python) /opt/aws/cloudwatch/efa/efa-to-cw.py /opt/aws/cloudwatch/efa/efa-exporter >> /dev/null 2>&1 &\n" | sudo tee -a /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
+echo -e "/usr/bin/python3 /opt/aws/cloudwatch/nvidia/aws-hwaccel-error-parser.py &" | sudo tee -a /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
+echo -e "/usr/bin/python3 /opt/aws/cloudwatch/nvidia/accel-to-cw.py /opt/aws/cloudwatch/nvidia/nvidia-exporter >> /dev/null 2>&1 &\n" | sudo tee -a /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
+echo -e "/usr/bin/python3 /opt/aws/cloudwatch/efa/efa-to-cw.py /opt/aws/cloudwatch/efa/efa-exporter >> /dev/null 2>&1 &\n" | sudo tee -a /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
 sudo chmod +x /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
 sudo cp /opt/aws/cloudwatch/nvidia/cwa-config.json /opt/aws/amazon-cloudwatch-agent/bin/config.json
 sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
