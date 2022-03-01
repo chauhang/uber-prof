@@ -26,35 +26,8 @@ aws s3 mb s3://mlbucket-${BUCKET_POSTFIX} --region us-west-2
 Output:
 
 ```bash
-make_bucket: s3://mybucket-057bf1b1
+make_bucket: s3://mlbucket-057bf1b1
 ```
-
-## Generate the policy
-
-cat > policy_s3_access.json << EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "ListObjectsInBucket",
-            "Effect": "Allow",
-            "Action": ["s3:ListBucket"],
-            "Resource": ["arn:aws:s3:::$BUCKET"]
-        },
-        {
-            "Sid": "GetObjectActions",
-            "Effect": "Allow",
-            "Action": "s3:GetObject",
-            "Resource": ["arn:aws:s3:::$BUCKET/*"]
-        }
-    ]
-}
-EOF
-
-## Deploy the policy
-
-aws iam create-policy --policy-name ParallelClusterS3BucketPolicyCustomAMI${BUCKET_POSTFIX} \
-    --policy-document file://policy_s3_access.json
 
 ## Upload post-install script
 
@@ -66,7 +39,11 @@ aws s3 cp compute-post-install.sh s3://mlbucket-${BUCKET_POSTFIX}
 upload: ./post-install.sh to s3://mlbucket-057bf1b1/compute-post-install.sh
 ```
 
-Note: *Add read permission to the scripts in s3. Make sure to change CC version in compute-post-install.sh*
+# Create VPC
+
+```bash
+aws cloudformation create-stack --stack-name VPC-Large-Scale --template-body file://VPC-Large-Scale.yml
+```
 
 ## Create key-pair for hpc cluster
 
@@ -81,6 +58,7 @@ chmod 600 ~/.ssh/hpc-key
 
 ### Refer: [Cluster configuration v3](https://docs.aws.amazon.com/parallelcluster/latest/ug/cluster-configuration-file-v3.html)
 
+Note: Add Subnet with Public IP for headnode and Private IP for compute nodes.
 ## Create HPC cluster
 
 ```bash
@@ -95,9 +73,9 @@ Output
   "cluster": {
     "clusterName": "my-hpc-cluster",
     "cloudformationStackStatus": "CREATE_IN_PROGRESS",
-    "cloudformationStackArn": "arn:aws:cloudformation:us-west-2:379740236983:stack/my-hpc-cluster/dc43a000-640b-11ec-846b-0a803e033d61",
+    "cloudformationStackArn": "arn:aws:cloudformation:us-west-2:<ACCOUNT_ID>:stack/my-hpc-cluster/dc43a000-640b-11ec-846b-0a803e033d61",
     "region": "us-west-2",
-    "version": "3.0.2",
+    "version": "3.1.1",
     "clusterStatus": "CREATE_IN_PROGRESS"
   }
 }
@@ -105,7 +83,7 @@ Output
 
 ## Create a IAM user account
 
-Create an IAM user account with programmatic credentials and assign the AWS Managed Policy `AmazonEC2ReadOnlyAccess`, `AmazonS3ReadOnlyAccess`, `CloudWatchLogsReadOnlyAccess`
+Create an IAM user account with programmatic credentials and assign the AWS Managed Policy `AmazonEC2ReadOnlyAccess`, `AmazonS3ReadOnlyAccess`, `CloudWatchLogsReadOnlyAccess`, `CloudWatchReadOnlyAccess`
 
 ## Modify the prometheus.yaml
 
@@ -179,3 +157,9 @@ Add new dashboard with loki data source with logs as visualization panel.
 ![Add dashboard panel](./images/dashboard_panel.png)
 
 ## [EFA Supported Instance Types](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa.html#efa-instance-types)
+
+
+## Demo Videos
+### ![Grafana Dashboards](../training-job/Dashboards.mp4)
+
+### ![Slurm Job Logs](../training-job/job_log.mp4)

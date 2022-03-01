@@ -22,7 +22,7 @@ sudo -u ec2-user /lustre/.conda/bin/conda init bash
 #         "queue0-p4d24xlarge": {
 #             "CapacityReservationSpecification": {
 #                 "CapacityReservationTarget": {
-#                     "CapacityReservationResourceGroupArn": "arn:aws:resource-groups:ap-northeast-2:379740236983:group/EC2CRGroup"
+#                     "CapacityReservationResourceGroupArn": "arn:aws:resource-groups:ap-northeast-2:<ACCOUNT_ID>:group/EC2CRGroup"
 #                 }
 #             }
 #         }

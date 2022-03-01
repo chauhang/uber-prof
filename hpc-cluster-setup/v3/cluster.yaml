@@ -1,4 +1,4 @@
-Region: us-west-2
+Region: ap-northeast-2
 Image:
   Os: alinux2
 HeadNode:
@@ -11,14 +11,16 @@ HeadNode:
       - Policy: arn:aws:iam::aws:policy/AmazonSSMFullAccess
       - Policy: arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess
       # Add below policy for capacity reservation
-      - Policy: arn:aws:iam::379740236983:policy/RunInstancesInCapacityReservation
+      - Policy: arn:aws:iam::<ACCOUNT_ID>:policy/RunInstancesInCapacityReservation
+    S3Access:
+      - BucketName: mlbucket-057bf1b1
+  Ssh:
+    KeyName: hpc-ap-northeast-2
   LocalStorage:
     RootVolume:
       Size: 150
   Networking:
-    SubnetId: subnet-861deddb
-  Ssh:
-    KeyName: hpc-key
+    SubnetId: subnet-072c93863e2163515
   Dcv:
     Enabled: true
     Port: 8443
@@ -36,17 +38,19 @@ Scheduling:
     - Name: queue0
       Networking:
         SubnetIds:
-          - subnet-861deddb
+          - subnet-01b6f2a414cc350bc
         PlacementGroup:
           Enabled: true
       ComputeResources:
-        - Name: queue0-p3dn24xlarge
-          InstanceType: p3dn.24xlarge
+        - Name: queue0-p4d24xlarge
+          InstanceType: p4d.24xlarge
           MaxCount: 4
           MinCount: 2
           Efa:
             Enabled: true
       Iam:
+        S3Access:
+          - BucketName: mlbucket-057bf1b1
         AdditionalIamPolicies:
           - Policy: arn:aws:iam::aws:policy/CloudWatchFullAccess
           - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
