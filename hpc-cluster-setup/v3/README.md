@@ -26,14 +26,23 @@ aws s3 mb s3://mlbucket-${BUCKET_POSTFIX} --region us-west-2
 Output:
 
 ```bash
-make_bucket: s3://mybucket-057bf1b1
+make_bucket: s3://mlbucket-057bf1b1
 ```
 
 ## Upload post-install script
 
 ```bash
-aws s3 cp post-install.sh s3://mlbucket-${BUCKET_POSTFIX}
-upload: ./post-install.sh to s3://mlbucket-057bf1b1/post-install.sh
+aws s3 cp head-post-install.sh s3://mlbucket-${BUCKET_POSTFIX}
+upload: ./post-install.sh to s3://mlbucket-057bf1b1/head-post-install.sh
+
+aws s3 cp compute-post-install.sh s3://mlbucket-${BUCKET_POSTFIX}
+upload: ./post-install.sh to s3://mlbucket-057bf1b1/compute-post-install.sh
+```
+
+# Create VPC
+
+```bash
+aws cloudformation create-stack --stack-name VPC-Large-Scale --template-body file://VPC-Large-Scale.yml
 ```
 
 ## Create key-pair for hpc cluster
@@ -49,6 +58,7 @@ chmod 600 ~/.ssh/hpc-key
 
 ### Refer: [Cluster configuration v3](https://docs.aws.amazon.com/parallelcluster/latest/ug/cluster-configuration-file-v3.html)
 
+Note: Add Subnet with Public IP for headnode and Private IP for compute nodes.
 ## Create HPC cluster
 
 ```bash
@@ -63,9 +73,9 @@ Output
   "cluster": {
     "clusterName": "my-hpc-cluster",
     "cloudformationStackStatus": "CREATE_IN_PROGRESS",
-    "cloudformationStackArn": "arn:aws:cloudformation:us-west-2:379740236983:stack/my-hpc-cluster/dc43a000-640b-11ec-846b-0a803e033d61",
+    "cloudformationStackArn": "arn:aws:cloudformation:us-west-2:<ACCOUNT_ID>:stack/my-hpc-cluster/dc43a000-640b-11ec-846b-0a803e033d61",
     "region": "us-west-2",
-    "version": "3.0.2",
+    "version": "3.1.1",
     "clusterStatus": "CREATE_IN_PROGRESS"
   }
 }
@@ -73,7 +83,7 @@ Output
 
 ## Create a IAM user account
 
-Create an IAM user account with programmatic credentials and assign the AWS Managed Policy `AmazonEC2ReadOnlyAccess`
+Create an IAM user account with programmatic credentials and assign the AWS Managed Policy `AmazonEC2ReadOnlyAccess`, `AmazonS3ReadOnlyAccess`, `CloudWatchLogsReadOnlyAccess`, `CloudWatchReadOnlyAccess`
 
 ## Modify the prometheus.yaml
 
@@ -91,15 +101,15 @@ docker-compose --env-file /etc/parallelcluster/cfnconfig -f ~/aws-parallelcluste
 
 Import the below dashboard into grafana
 
-https://grafana.com/grafana/dashboards/12239
+<https://grafana.com/grafana/dashboards/12239>
 
 ## Add Slum Job Log to Grafana
 
 ### Download loki and promtail
 
 ```bash
-https://github.com/grafana/loki/releases/download/v2.4.2/loki-linux-amd64.zip
-https://github.com/grafana/loki/releases/download/v2.4.2/promtail-linux-amd64.zip
+wget https://github.com/grafana/loki/releases/download/v2.4.2/loki-linux-amd64.zip
+wget https://github.com/grafana/loki/releases/download/v2.4.2/promtail-linux-amd64.zip
 
 unzip loki-linux-amd64.zip
 unzip promtail-linux-amd64.zip
@@ -125,13 +135,13 @@ wget https://raw.githubusercontent.com/grafana/loki/main/clients/cmd/promtail/pr
       - localhost
     labels:
       job: slurmlogs
-      __path__: /shared/uber-prof/training-job/*.out
+      __path__: /lustre/uber-prof/training-job/*.out
 ```
 
 ### Start promtail
 
 ```bash
-./promtail-linux-amd64 --config.file= promtail-local-config.yaml &
+./promtail-linux-amd64 --config.file=promtail-local-config.yaml &
 ```
 
 ### Add loki datasource to Grafana
@@ -147,3 +157,9 @@ Add new dashboard with loki data source with logs as visualization panel.
 ![Add dashboard panel](./images/dashboard_panel.png)
 
 ## [EFA Supported Instance Types](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa.html#efa-instance-types)
+
+
+## Demo Videos
+### ![Grafana Dashboards](../../training-job/Dashboards.mp4)
+
+### ![Slurm Job Logs](../../training-job/Job_log.mp4)

@@ -13,7 +13,12 @@ chmod +x job_epilog.sh
 Navigate to training-job folder and install packages in headnode
 
 ```bash
-pip3 install -r requirements.txt
+chmod +x install_PT1.10_from_src.sh
+./install_PT1.10_from_src.sh
+```
+
+```bash
+pip3 install --no-cache-dir -r requirements.txt
 ```
 
 ## Change model parameters and profiler settings
