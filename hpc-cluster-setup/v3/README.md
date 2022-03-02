@@ -52,6 +52,15 @@ aws ec2 create-key-pair --key-name hpc-key --query KeyMaterial --output text > ~
 chmod 600 ~/.ssh/hpc-key
 ```
 
+## Build dcgm
+
+```bash
+chmod +x dcgm-build.sh
+./dcgm-build.sh
+```
+
+Upload the built package from `_out` folder to a s3 bucket and update the url in `compute-post-install.sh` script.
+
 ## Edit cluster config yaml
 
 ### Modify the cluster.yaml to suit your requirement
@@ -163,3 +172,7 @@ Add new dashboard with loki data source with logs as visualization panel.
 ### ![Grafana Dashboards](../../training-job/Dashboards.mp4)
 
 ### ![Slurm Job Logs](../../training-job/Job_log.mp4)
+
+## Tests
+
+Refer [tests](./tests) folder for NCCL and fsx tests.
