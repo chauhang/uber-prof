@@ -145,3 +145,22 @@ Successfully retrieved statistics for job: 232.
 
 Successfully removed group 23
 ```
+
+## Error injection tests
+
+Update the HOST details in [test_error_injection.py](test_error_injection.py) based on your environment.
+
+Run the following command 
+
+```
+pytest test_error_injection.py 
+```
+
+To add any new error, add entries to the [dcgm_errors.json](dcgm_errors.json) file.
+
+
+To run the test in debug mode - run the following command
+
+```
+pytest -sv --log-cli-level=DEBUG test_error_injection.py 
+```
