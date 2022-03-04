@@ -1,0 +1,28 @@
+{
+   "XID":{
+      "f_param":230,
+      "v_param":48,
+      "msg":"XID error 11 detected"
+   },
+   "ECC":{
+      "f_param":319,
+      "v_param":48,
+      "msg":"A double-bit ECC error has violated policy manager values"
+   },
+   "NVLink":{
+      "f_param":409,
+      "v_param":100,
+      "msg":"NVLink Counter 409 has violated policy manager values"
+   },
+   "PCIReplay":{
+      "f_param":202,
+      "v_param":10,
+      "msg":"A PCIe replay event has violated policy manager values"
+   },
+
+   "thermal":{
+      "f_param":150,
+      "v_param":200,
+      "msg":"The maximum thermal limit has violated policy manager values"
+   }
+}
