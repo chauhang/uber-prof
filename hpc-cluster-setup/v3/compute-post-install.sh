@@ -13,6 +13,9 @@ sudo yum groupinstall "Development Tools" -y
 sudo yum install wget kernel-devel-$(uname -r) kernel-headers-$(uname -r) -y
 # sudo yum install gcc10 kernel-devel kernel-headers -y
 
+# Fix Polkit Privilege Escalation Vulnerability
+chmod 0755 /usr/bin/pkexec
+
 export INSTALL_ROOT=${HOME}
 
 mkdir -p "$INSTALL_ROOT"/packages
@@ -86,13 +89,13 @@ export EFA_HOME=/opt/amazon/efa
 export MPI_HOME=/opt/amazon/openmpi
 export FI_PROVIDER="efa"
 export NCCL_DEBUG=INFO
-export FI_EFA_USE_DEVICE_RDMA=1
+export FI_EFA_USE_DEVICE_RDMA=1  # Use for p4dn
 export NCCL_ALGO=ring
 
 echo "================================"
 echo "===========Check EFA============"
 echo "================================"
-fi_info -c FI_HMEM -p efa
+fi_info -t FI_EP_RDM -p efa
 
 echo "================================"
 echo "====Testing all_reduce_perf====="
@@ -100,12 +103,6 @@ echo "================================"
 # test all_reduce_perf
 bin=$INSTALL_ROOT/packages/nccl-tests/build/all_reduce_perf
 LD_LIBRARY_PATH=$CUDA_HOME/lib:$CUDA_HOME/lib64:$EFA_HOME/lib64:$MPI_HOME/lib64:$INSTALL_ROOT/packages/nccl/build/lib $bin -b 8 -e 128M -f 2 -g 8
-
-# test MPI EFA
-echo "================================"
-echo "=========Testing mpirun========="
-echo "================================"
-/opt/amazon/openmpi/bin/mpirun -np 1 -x NCCL_DEBUG=INFO -x FI_PROVIDER=efa -x LD_LIBRARY_PATH=$CUDA_HOME/lib:$CUDA_HOME/lib64:$EFA_HOME/lib64:/opt/amazon/openmpi/lib64:$INSTALL_ROOT/packages/nccl/build/lib $INSTALL_ROOT/packages/nccl-tests/build/all_reduce_perf -b 8 -e 128M -f 2 -g 8
 
 # TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
 # curl -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/local-ipv4 >> my-hosts
