@@ -21,7 +21,8 @@ from sklearn.datasets import fetch_20newsgroups
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
 from transformers import BertModel, BertTokenizer, AdamW
-import torchtext.datasets as td
+from torchtext.datasets import AG_NEWS
+from torch.utils.data.dataset import IterDataPipe
 
 
 def get_20newsgroups(num_samples):
@@ -29,21 +30,8 @@ def get_20newsgroups(num_samples):
     X, y = fetch_20newsgroups(subset="train", categories=categories, return_X_y=True)
     return pd.DataFrame(data=X, columns=["description"]).assign(label=y).sample(n=num_samples)
 
-
-def get_ag_news(num_samples):
-    # reading the input
-    if not os.path.exists('data'):
-        td.AG_NEWS(root="data", split=("train", "test"))
-    train_csv_path = "data/AG_NEWS/train.csv"
-    return (
-        pd.read_csv(train_csv_path, usecols=[0, 2], names=["label", "description"])
-        .assign(label=lambda df: df["label"] - 1)  # make labels zero-based
-        .sample(n=num_samples)
-    )
-
-
-class NewsDataset(Dataset):
-    def __init__(self, reviews, targets, tokenizer, max_length):
+class NewsDataset(IterDataPipe):
+    def __init__(self, source_datapipe, tokenizer, max_length, num_samples=None):
         """
         Performs initialization of tokenizer
 
@@ -53,19 +41,13 @@ class NewsDataset(Dataset):
         :param max_length: maximum length of the news text
 
         """
-        self.reviews = reviews
-        self.targets = targets
+        self.source_datapipe = source_datapipe
         self.tokenizer = tokenizer
         self.max_length = max_length
+        self.num_samples = num_samples
 
-    def __len__(self):
-        """
-        :return: returns the number of datapoints in the dataframe
 
-        """
-        return len(self.reviews)
-
-    def __getitem__(self, item):
+    def __iter__(self):
         """
         Returns the review text and the targets of the specified item
 
@@ -73,26 +55,32 @@ class NewsDataset(Dataset):
 
         :return: Returns the dictionary of review text, input ids, attention mask, targets
         """
-        review = str(self.reviews[item])
-        target = self.targets[item]
+        counter = 0
+        for target, review in self.source_datapipe:
+            print("Counter: ", counter)
+            if counter >= self.num_samples:
+                break
+            counter += 1
+            print(target, review)
+            text = review
+            encoding = self.tokenizer.encode_plus(
+                text,
+                add_special_tokens=True,
+                max_length=self.max_length,
+                return_token_type_ids=False,
+                padding="max_length",
+                return_attention_mask=True,
+                return_tensors="pt",
+                truncation=True,
+            )
+            target -= 1
 
-        encoding = self.tokenizer.encode_plus(
-            review,
-            add_special_tokens=True,
-            max_length=self.max_length,
-            return_token_type_ids=False,
-            padding="max_length",
-            return_attention_mask=True,
-            return_tensors="pt",
-            truncation=True,
-        )
-
-        return {
-            "review_text": review,
-            "input_ids": encoding["input_ids"].flatten(),
-            "attention_mask": encoding["attention_mask"].flatten(),
-            "targets": torch.tensor(target, dtype=torch.long),
-        }
+            yield {
+                "review_text": review,
+                "input_ids": encoding["input_ids"].flatten(),
+                "attention_mask": encoding["attention_mask"].flatten(),
+                "targets": torch.tensor(target, dtype=torch.long),
+            }
 
 
 class BertDataModule(pl.LightningDataModule):
@@ -119,30 +107,8 @@ class BertDataModule(pl.LightningDataModule):
 
         :param stage: Stage - training or testing
         """
-
-        num_samples = self.args["num_samples"]
-        df = (
-            get_20newsgroups(num_samples)
-            if self.args["dataset"] == "20newsgroups"
-            else get_ag_news(num_samples)
-        )
-
+        self.df_train, self.df_test = AG_NEWS()
         self.tokenizer = BertTokenizer.from_pretrained(self.PRE_TRAINED_MODEL_NAME)
-
-        RANDOM_SEED = 42
-        np.random.seed(RANDOM_SEED)
-        torch.manual_seed(RANDOM_SEED)
-
-        df_train, df_test = train_test_split(
-            df, test_size=0.3, random_state=RANDOM_SEED, stratify=df["label"]
-        )
-        df_val, df_test = train_test_split(
-            df_test, test_size=0.5, random_state=RANDOM_SEED, stratify=df_test["label"]
-        )
-
-        self.df_train = df_train
-        self.df_test = df_test
-        self.df_val = df_val
 
     def setup(self, stage=None):
         pass
@@ -173,7 +139,7 @@ class BertDataModule(pl.LightningDataModule):
         )
         return parser
 
-    def create_data_loader(self, df, tokenizer, max_len, batch_size):
+    def create_data_loader(self, source, tokenizer, max_len, batch_size, num_samples=None):
         """
         Generic data loader function
 
@@ -185,8 +151,7 @@ class BertDataModule(pl.LightningDataModule):
         :return: Returns the constructed dataloader
         """
         ds = NewsDataset(
-            reviews=df.description.to_numpy(),
-            targets=df.label.to_numpy(),
+            source_datapipe=source,
             tokenizer=tokenizer,
             max_length=max_len,
         )
@@ -199,26 +164,39 @@ class BertDataModule(pl.LightningDataModule):
         """
         :return: output - Train data loader for the given input
         """
-        self.train_data_loader = self.create_data_loader(
-            self.df_train, self.tokenizer, self.MAX_LEN, self.args["batch_size"]
+        ds = NewsDataset(
+            source_datapipe=self.df_train,
+            tokenizer=self.tokenizer,
+            max_length=self.MAX_LEN,
+            num_samples=self.args.get("train_num_samples", None)
+        )
+
+        self.train_data_loader = DataLoader(
+            ds, batch_size=self.args["batch_size"], num_workers=self.args["num_workers"]
         )
         return self.train_data_loader
 
-    def val_dataloader(self):
-        """
-        :return: output - Validation data loader for the given input
-        """
-        self.val_data_loader = self.create_data_loader(
-            self.df_val, self.tokenizer, self.MAX_LEN, self.args["batch_size"]
-        )
-        return self.val_data_loader
+    # def val_dataloader(self):
+    #     """
+    #     :return: output - Validation data loader for the given input
+    #     """
+    #     self.val_data_loader = self.create_data_loader(
+    #         self.df_val, self.tokenizer, self.MAX_LEN, self.args["batch_size"]
+    #     )
+    #     return self.val_data_loader
 
     def test_dataloader(self):
         """
         :return: output - Test data loader for the given input
         """
-        self.test_data_loader = self.create_data_loader(
-            self.df_test, self.tokenizer, self.MAX_LEN, self.args["batch_size"]
+        ds = NewsDataset(
+            source_datapipe=self.df_test,
+            tokenizer=self.tokenizer,
+            max_length=self.MAX_LEN,
+            num_samples=self.args.get("test_num_samples", None)
+        )
+        self.test_data_loader = DataLoader(
+            ds, batch_size=self.args["batch_size"], num_workers=self.args["num_workers"]
         )
         return self.test_data_loader
 
@@ -315,33 +293,33 @@ class BertNewsClassifier(pl.LightningModule):
         test_acc = accuracy_score(y_hat.cpu(), targets.cpu())
         return {"test_acc": torch.tensor(test_acc)}
 
-    def validation_step(self, val_batch, batch_idx):
-        """
-        Performs validation of data in batches
-
-        :param val_batch: Batch data
-        :param batch_idx: Batch indices
-
-        :return: output - valid step loss
-        """
-
-        input_ids = val_batch["input_ids"].to(self.device)
-        attention_mask = val_batch["attention_mask"].to(self.device)
-        targets = val_batch["targets"].to(self.device)
-        output = self.forward(input_ids, attention_mask)
-        loss = F.cross_entropy(output, targets)
-        return {"val_step_loss": loss}
-
-    def validation_epoch_end(self, outputs):
-        """
-        Computes average validation accuracy
-
-        :param outputs: outputs after every epoch end
-
-        :return: output - average valid loss
-        """
-        avg_loss = torch.stack([x["val_step_loss"] for x in outputs]).mean()
-        self.log("val_loss", avg_loss, sync_dist=True)
+    # def validation_step(self, val_batch, batch_idx):
+    #     """
+    #     Performs validation of data in batches
+    #
+    #     :param val_batch: Batch data
+    #     :param batch_idx: Batch indices
+    #
+    #     :return: output - valid step loss
+    #     """
+    #
+    #     input_ids = val_batch["input_ids"].to(self.device)
+    #     attention_mask = val_batch["attention_mask"].to(self.device)
+    #     targets = val_batch["targets"].to(self.device)
+    #     output = self.forward(input_ids, attention_mask)
+    #     loss = F.cross_entropy(output, targets)
+    #     return {"val_step_loss": loss}
+    #
+    # def validation_epoch_end(self, outputs):
+    #     """
+    #     Computes average validation accuracy
+    #
+    #     :param outputs: outputs after every epoch end
+    #
+    #     :return: output - average valid loss
+    #     """
+    #     avg_loss = torch.stack([x["val_step_loss"] for x in outputs]).mean()
+    #     self.log("val_loss", avg_loss, sync_dist=True)
 
     def test_epoch_end(self, outputs):
         """
@@ -379,9 +357,16 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Bert-News Classifier Example")
 
     parser.add_argument(
-        "--num_samples",
+        "--train_num_samples",
         type=int,
-        default=15000,
+        default=2000,
+        metavar="N",
+        help="Number of samples to be used for training and evaluation steps (default: 15000) Maximum:100000",
+    )
+    parser.add_argument(
+        "--test_num_samples",
+        type=int,
+        default=200,
         metavar="N",
         help="Number of samples to be used for training and evaluation steps (default: 15000) Maximum:100000",
     )
@@ -439,6 +424,7 @@ if __name__ == "__main__":
                 callbacks=[lr_logger, early_stopping, checkpoint_callback],
                 resume_from_checkpoint=checkpoint_list[0],
                 checkpoint_callback=True,
+                # val_check_interval=0.2
             )
     else:
         trainer = pl.Trainer.from_argparse_args(
@@ -448,5 +434,3 @@ if __name__ == "__main__":
         )
 
     trainer.fit(model, dm)
-
-
