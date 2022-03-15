@@ -3,10 +3,11 @@
 # pylint: disable=abstract-method
 
 import glob
+import logging
 import math
 import os
 from argparse import ArgumentParser
-import numpy as np
+
 import pandas as pd
 import pytorch_lightning as pl
 import torch
@@ -16,17 +17,14 @@ from pytorch_lightning.callbacks import (
     ModelCheckpoint,
     LearningRateMonitor,
 )
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
 from sklearn.datasets import fetch_20newsgroups
+from sklearn.metrics import accuracy_score
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
-from transformers import BertModel, BertTokenizer, AdamW
-from torchtext.datasets import AG_NEWS
-from torch.utils.data.dataset import IterDataPipe
+from torch.utils.data.dataset import IterDataPipe, random_split
 from torchtext.data.functional import to_map_style_dataset
-from torch.utils.data.dataset import random_split
-import logging
+from torchtext.datasets import AG_NEWS
+from transformers import BertModel, BertTokenizer, AdamW
 
 
 def get_20newsgroups(num_samples):
@@ -110,15 +108,28 @@ class BertDataModule(pl.LightningDataModule):
         self.test_dataset = to_map_style_dataset(test_iter)
 
         num_train = int(len(self.train_dataset) * 0.95)
-        self.train_dataset, self.val_dataset = \
-            random_split(self.train_dataset, [num_train, len(self.train_dataset) - num_train])
+        self.train_dataset, self.val_dataset = random_split(
+            self.train_dataset, [num_train, len(self.train_dataset) - num_train]
+        )
 
         logging.debug("Total train samples: {}".format(len(self.train_dataset)))
         logging.debug("Total validation samples: {}".format(len(self.val_dataset)))
         logging.debug("Total test samples: {}".format(len(self.test_dataset)))
-        logging.debug("Number of samples to be used for training: {}".format(self.args.get("train_num_samples", None)))
-        logging.debug("Number of samples to be used for validation: {}".format(self.args.get("val_num_samples", None)))
-        logging.debug("Number of samples to be used for test: {}".format(self.args.get("test_num_samples", None)))
+        logging.debug(
+            "Number of samples to be used for training: {}".format(
+                self.args.get("train_num_samples", None)
+            )
+        )
+        logging.debug(
+            "Number of samples to be used for validation: {}".format(
+                self.args.get("val_num_samples", None)
+            )
+        )
+        logging.debug(
+            "Number of samples to be used for test: {}".format(
+                self.args.get("test_num_samples", None)
+            )
+        )
         self.tokenizer = BertTokenizer.from_pretrained(self.PRE_TRAINED_MODEL_NAME)
 
     def setup(self, stage=None):
@@ -179,7 +190,7 @@ class BertDataModule(pl.LightningDataModule):
             source_datapipe=self.train_dataset,
             tokenizer=self.tokenizer,
             max_length=self.MAX_LEN,
-            num_samples=self.args.get("train_num_samples", None)
+            num_samples=self.args.get("train_num_samples", None),
         )
 
         self.train_data_loader = DataLoader(
@@ -195,7 +206,7 @@ class BertDataModule(pl.LightningDataModule):
             source_datapipe=self.val_dataset,
             tokenizer=self.tokenizer,
             max_length=self.MAX_LEN,
-            num_samples=self.args.get("val_num_samples", None)
+            num_samples=self.args.get("val_num_samples", None),
         )
 
         self.val_data_loader = DataLoader(
@@ -211,7 +222,7 @@ class BertDataModule(pl.LightningDataModule):
             source_datapipe=self.test_dataset,
             tokenizer=self.tokenizer,
             max_length=self.MAX_LEN,
-            num_samples=self.args.get("test_num_samples", None)
+            num_samples=self.args.get("test_num_samples", None),
         )
         self.test_data_loader = DataLoader(
             ds, batch_size=self.args["batch_size"], num_workers=self.args["num_workers"]
@@ -408,13 +419,15 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--resume", default=False, type=bool, help="Set to True for resuming from previous checkpoint"
+        "--resume",
+        default=False,
+        type=bool,
+        help="Set to True for resuming from previous checkpoint",
     )
 
     parser = pl.Trainer.add_argparse_args(parent_parser=parser)
     parser = BertNewsClassifier.add_model_specific_args(parent_parser=parser)
     parser = BertDataModule.add_model_specific_args(parent_parser=parser)
-
 
     args = parser.parse_args()
     dict_args = vars(args)
@@ -430,7 +443,8 @@ if __name__ == "__main__":
     early_stopping = EarlyStopping(monitor="val_loss", mode="min", verbose=True)
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath=os.getcwd(), every_n_epochs=dict_args["save_every_n_epoch"],
+        dirpath=os.getcwd(),
+        every_n_epochs=dict_args["save_every_n_epoch"],
     )
     lr_logger = LearningRateMonitor()
 
