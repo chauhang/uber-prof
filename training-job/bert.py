@@ -27,12 +27,6 @@ from torchtext.datasets import AG_NEWS
 from transformers import BertModel, BertTokenizer, AdamW
 
 
-def get_20newsgroups(num_samples):
-    categories = ["alt.atheism", "talk.religion.misc", "comp.graphics", "sci.space"]
-    X, y = fetch_20newsgroups(subset="train", categories=categories, return_X_y=True)
-    return pd.DataFrame(data=X, columns=["description"]).assign(label=y).sample(n=num_samples)
-
-
 class NewsDataset(IterDataPipe):
     def __init__(self, tokenizer, source_datapipe, max_length, num_samples=None):
         super(NewsDataset, self).__init__()
@@ -388,30 +382,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "--train_num_samples",
         type=int,
-        default=1000,
+        default=10000,
         metavar="N",
         help="Number of samples to be used for training",
     )
     parser.add_argument(
         "--val_num_samples",
         type=int,
-        default=100,
+        default=1000,
         metavar="N",
         help="Number of samples to be used for validation",
     )
     parser.add_argument(
         "--test_num_samples",
         type=int,
-        default=200,
+        default=1000,
         metavar="N",
         help="Number of samples to be used for testing",
-    )
-    parser.add_argument(
-        "--dataset",
-        default="20newsgroups",
-        metavar="DATASET",
-        help="Dataset to use",
-        choices=["20newsgroups", "ag_news"],
     )
 
     parser.add_argument(
@@ -463,7 +450,6 @@ if __name__ == "__main__":
                 callbacks=[lr_logger, early_stopping, checkpoint_callback],
                 resume_from_checkpoint=checkpoint_list[0],
                 checkpoint_callback=True,
-                # val_check_interval=0.2
             )
     else:
         trainer = pl.Trainer.from_argparse_args(
