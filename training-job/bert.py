@@ -236,11 +236,7 @@ class BertNewsClassifier(pl.LightningModule):
             param.requires_grad = False
         self.drop = nn.Dropout(p=0.2)
         # assigning labels
-        self.class_names = (
-            ["alt.atheism", "talk.religion.misc", "comp.graphics", "sci.space"]
-            if kwargs["dataset"] == "20newsgroups"
-            else ["world", "Sports", "Business", "Sci/Tech"]
-        )
+        self.class_names = ["world", "Sports", "Business", "Sci/Tech"]
         n_classes = len(self.class_names)
 
         self.fc1 = nn.Linear(self.bert_model.config.hidden_size, 512)
@@ -382,21 +378,21 @@ if __name__ == "__main__":
     parser.add_argument(
         "--train_num_samples",
         type=int,
-        default=10000,
+        default=2000,
         metavar="N",
         help="Number of samples to be used for training",
     )
     parser.add_argument(
         "--val_num_samples",
         type=int,
-        default=1000,
+        default=200,
         metavar="N",
         help="Number of samples to be used for validation",
     )
     parser.add_argument(
         "--test_num_samples",
         type=int,
-        default=1000,
+        default=200,
         metavar="N",
         help="Number of samples to be used for testing",
     )
