@@ -1,0 +1,73 @@
+{
+  "UsePublicNetwork" : true,
+  "AdditionalNAS" : false,
+  "AdditionalNFSMountOptions" : null,
+  "About shared" : null,
+  "SubnetId" : "east-hpc/east-hpc-vnet/default",
+  "configuration_slurm_accounting_password" : null,
+  "Region" : "eastus",
+  "Additional NFS Mount Readme" : null,
+  "MaxHPCExecuteCoreCount" : 12,
+  "HTCImageName" : "microsoft-dsvm:ubuntu-hpc:1804:latest",
+  "MaxHTCExecuteCoreCount" : 12,
+  "AdditionalNFSExportPath" : "/data",
+  "FilesystemSize" : 100,
+  "HPCImageName" : "microsoft-dsvm:ubuntu-hpc:1804:latest",
+  "AdditionalNFSMountPoint" : "/data",
+  "configuration_slurm_shutdown_policy" : "Terminate",
+  "NodeNameIsHostname" : true,
+  "SchedulerClusterInitSpecs" : {
+    "head:default:1.0.0" : {
+      "Order" : 10000,
+      "Name" : "head:default:1.0.0",
+      "Spec" : "default",
+      "Project" : "head",
+      "Version" : "1.0.0",
+      "Locker" : "cyclecloud"
+    }
+  },
+  "configuration_slurm_accounting_enabled" : false,
+  "configuration_slurm_version" : "20.11.7-1",
+  "SchedulerMachineType" : "Standard_D12_v2",
+  "NFSSharedMountOptions" : null,
+  "configuration_slurm_accounting_user" : null,
+  "NodeNamePrefix" : "Cluster Prefix",
+  "HTCSpotMaxPrice" : -1,
+  "ReturnProxy" : true,
+  "Credentials" : "Partner Engineering group",
+  "Autoscale" : true,
+  "NFSSharedExportPath" : "/shared",
+  "NFSAddress" : null,
+  "slurm" : null,
+  "configuration_slurm_accounting_url" : null,
+  "NFSType" : "Builtin",
+  "AdditonalNFSAddress" : null,
+  "SchedulerHostName" : "Cluster Prefix",
+  "HTCUseLowPrio" : false,
+  "SchedulerImageName" : "cycle.image.ubuntu18",
+  "HTCMachineType" : "Standard_NC6s_v3",
+  "HPCClusterInitSpecs" : {
+    "compute:default:1.0.0" : {
+      "Order" : 10000,
+      "Name" : "compute:default:1.0.0",
+      "Spec" : "default",
+      "Project" : "compute",
+      "Version" : "1.0.0",
+      "Locker" : "cyclecloud"
+    }
+  },
+  "HPCMachineType" : "Standard_NC6s_v3",
+  "ExecuteNodesPublic" : false,
+  "HTCClusterInitSpecs" : {
+    "compute:default:1.0.0" : {
+      "Order" : 10000,
+      "Name" : "compute:default:1.0.0",
+      "Spec" : "default",
+      "Project" : "compute",
+      "Version" : "1.0.0",
+      "Locker" : "cyclecloud"
+    }
+  },
+  "HPCMaxScalesetSize" : 4,
+  "additional_slurm_config" : null
+}
