@@ -169,9 +169,9 @@ Add new dashboard with loki data source with logs as visualization panel.
 
 
 ## Demo Videos
-### ![Grafana Dashboards](../../training-job/Dashboards.mp4)
+### [Grafana Dashboards](https://youtu.be/KhvCCPjHwCY)
 
-### ![Slurm Job Logs](../../training-job/Job_log.mp4)
+### [Slurm Job Logs](https://youtu.be/RzOkHsmRM3U)
 
 ## Tests
 
