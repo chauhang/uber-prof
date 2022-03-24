@@ -169,3 +169,7 @@ To run the test in debug mode - run the following command
 ```
 pytest -sv --log-cli-level=DEBUG test_error_injection.py 
 ```
+
+Sample log output
+
+<script src="https://gist.github.com/shrinath-suresh/c738c28cf28cf5ecae6de2eb25035cce"></script> 
