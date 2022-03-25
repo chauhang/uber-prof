@@ -13,3 +13,4 @@ cat > /etc/sudoers.d/azureuser << EOF
 azureuser  ALL=(ALL) NOPASSWD: ALL
 EOF
 chmod 0440 /etc/sudoers.d/azureuser
+adduser azureuser sudo

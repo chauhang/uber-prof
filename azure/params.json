@@ -57,7 +57,7 @@
     }
   },
   "HPCMachineType" : "Standard_NC6s_v3",
-  "ExecuteNodesPublic" : false,
+  "ExecuteNodesPublic" : true,
   "HTCClusterInitSpecs" : {
     "compute:default:1.0.0" : {
       "Order" : 10000,

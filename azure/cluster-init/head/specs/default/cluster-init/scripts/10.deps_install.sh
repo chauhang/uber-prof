@@ -9,8 +9,9 @@ apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
   unzip \
   wget \
   xz-utils
-wget https://mlbucket-4d8b827c.s3.amazonaws.com/datacenter-gpu-manager_2.2.6-2_amd64.deb -O /shared/home/azureuser/datacenter-gpu-manager_2.2.6-2_amd64.deb
-dpkg -i /shared/home/azureuser/datacenter-gpu-manager_2.2.6-2_amd64.deb
+
+wget https://mlbucket-4d8b827c.s3.amazonaws.com/datacenter-gpu-manager_2.3.4_amd64.deb -O /shared/home/azureuser/datacenter-gpu-manager_2.3.4_amd64.deb
+apt install /shared/home/azureuser/datacenter-gpu-manager_2.3.4_amd64.deb -y
 
 CONDA_DIRECTORY=/shared/home/azureuser/.conda/bin
 

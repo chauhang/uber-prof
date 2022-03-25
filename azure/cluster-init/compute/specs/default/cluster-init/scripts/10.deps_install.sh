@@ -9,4 +9,12 @@ apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
   unzip \
   wget \
   xz-utils
-dpkg -i /shared/home/azureuser/datacenter-gpu-manager_2.2.6-2_amd64.deb
+nv-hostengine -t || true
+systemctl start nvidia-dcgm.service || true
+systemctl stop nvidia-dcgm.service || true
+if dpkg -s "datacenter-gpu-manager" >/dev/null;
+then
+  apt purge datacenter-gpu-manager -y
+fi
+apt install /shared/home/azureuser/datacenter-gpu-manager_2.3.4_amd64.deb -y
+nv-hostengine -b 0
