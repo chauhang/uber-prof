@@ -39,5 +39,5 @@ export NCCL_SOCKET_IFNAME="en,eth,em,bond"
 
 ### the command to run
 dcgmi profile --pause
-srun --prolog job_prolog.sh --epilog job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true python fsdp.py
+srun --prolog job_prolog.sh --epilog job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true python mnist_fsdp.py
 dcgmi profile --resume
