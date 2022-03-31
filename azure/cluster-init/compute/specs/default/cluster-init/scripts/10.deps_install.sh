@@ -27,10 +27,10 @@ export INSTALL_ROOT=/shared/home/azureuser
 cd $INSTALL_ROOT || exit
 GO_DIRECTORY=$INSTALL_ROOT/go
 if [ ! -d "$GO_DIRECTORY" ]; then
-  wget https://dl.google.com/go/go1.17.7.linux-amd64.tar.gz
-  tar -xvf go1.17.7.linux-amd64.tar.gz
+  wget https://dl.google.com/go/go1.18.linux-amd64.tar.gz
+  tar -xvf go1.18.linux-amd64.tar.gz
 fi
-cp -r go /usr/local
+rsync -auvz go /usr/local
 export GOROOT=/usr/local/go
 export GOPATH=$INSTALL_ROOT/go
 export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
