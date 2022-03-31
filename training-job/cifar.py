@@ -12,10 +12,8 @@ import torch.multiprocessing as mp
 
 
 def setup(rank, world_size):
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12355'
     os.environ['LOCAL_RANK'] = str(rank)
-    print("Rank is: ", rank)
+    os.environ['WORLD_SIZE'] = str(world_size)
 
     # initialize the process group
     dist.init_process_group("nccl", rank=rank, world_size=world_size)
