@@ -19,6 +19,9 @@ scrape_configs:
   - job_name: 'dcgm_exporter'
     scrape_interval:  30s
     scrape_timeout:   30s
+    # TODO: Use azure_sd_config
     file_sd_configs:
       - files:
         - 'targets.json'
+
+slurm-wlm
