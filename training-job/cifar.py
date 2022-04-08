@@ -11,20 +11,7 @@ from composer import models
 import torch.multiprocessing as mp
 
 
-def setup(rank, world_size):
-    os.environ['LOCAL_RANK'] = str(rank)
-    os.environ['WORLD_SIZE'] = str(world_size)
-
-    # initialize the process group
-    dist.init_process_group("nccl", rank=rank, world_size=world_size)
-
-
-def cleanup():
-    dist.destroy_process_group()
-
-
-def ddp_main(rank, world_size, args):
-    setup(rank, world_size)
+def train(args):
     data_directory = "data"
 
     # Normalization constants
@@ -34,7 +21,8 @@ def ddp_main(rank, world_size, args):
     batch_size = 1024
 
     cifar10_transforms = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize(mean, std)])
+        [transforms.ToTensor(), transforms.Normalize(mean, std)]
+    )
 
     train_dataset = datasets.CIFAR10(
         data_directory, train=True, download=True, transform=cifar10_transforms
@@ -43,8 +31,9 @@ def ddp_main(rank, world_size, args):
         data_directory, train=False, download=True, transform=cifar10_transforms
     )
 
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
-                                                   shuffle=True)
+    train_dataloader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True
+    )
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     model = models.CIFAR10_ResNet56()
@@ -63,9 +52,10 @@ def ddp_main(rank, world_size, args):
         alpha_f=1.0,
     )
 
-    train_epochs = "9ep"
+    train_epochs = args.epochs
     device = "gpu"  # Train on the GPU
 
+    print("############# Training baseline model")
     trainer = composer.trainer.Trainer(
         model=model,
         train_dataloader=train_dataloader,
@@ -79,7 +69,7 @@ def ddp_main(rank, world_size, args):
     start_time = time.perf_counter()
     trainer.fit()
     end_time = time.perf_counter()
-    print(f"It took {end_time - start_time:0.4f} seconds to train")
+    print(f"It took {end_time - start_time:0.4f} seconds to train {args.epochs} epochs")
 
     colout = composer.algorithms.ColOut()
 
@@ -102,6 +92,7 @@ def ddp_main(rank, world_size, args):
         model.parameters(), lr=0.05, momentum=0.9, weight_decay=2.0e-3
     )
 
+    print("############# Accelerated training")
     trainer = composer.trainer.Trainer(
         model=model,
         train_dataloader=train_dataloader,
@@ -117,47 +108,22 @@ def ddp_main(rank, world_size, args):
     trainer.fit()
     end_time = time.perf_counter()
     three_epochs_accelerated_time = end_time - start_time
-    print(f"It took {three_epochs_accelerated_time:0.4f} seconds to train")
-
-    train_epochs = "9ep"
-
-    lr_scheduler = composer.optim.scheduler.ConstantScheduler(alpha=1.0, t_max="1dur")
-
-    algorithms = [colout]
-
-    trainer = composer.trainer.Trainer(
-        model=model,
-        train_dataloader=train_dataloader,
-        eval_dataloader=test_dataloader,
-        max_duration=train_epochs,
-        optimizers=optimizer,
-        schedulers=lr_scheduler,
-        device=device,
-        algorithms=algorithms,
+    print(
+        f"Accelerated Training took {three_epochs_accelerated_time:0.4f} seconds to train - {args.epochs} epochs"
     )
 
-    start_time = time.perf_counter()
-    trainer.fit()
 
-    end_time = time.perf_counter()
-    final_epoch_accelerated_time = end_time - start_time
-    # Time for four epochs = time for three epochs + time for fourth epoch
-    four_epochs_accelerated_time = three_epochs_accelerated_time + final_epoch_accelerated_time
-    print(f"It took {four_epochs_accelerated_time:0.4f} seconds to train")
-
-    cleanup()
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     torch.manual_seed(42)
 
-    parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-    parser.add_argument('--epochs', type=str, default="3ep", metavar='N',
-                        help='number of epochs to train (default: 14)')
+    parser = argparse.ArgumentParser(description="PyTorch MNIST Example")
+    parser.add_argument(
+        "--epochs",
+        type=str,
+        default="3ep",
+        metavar="N",
+        help="number of epochs to train (default: 14)",
+    )
     args = parser.parse_args()
 
-    WORLD_SIZE = torch.cuda.device_count()
-    mp.spawn(ddp_main,
-             args=(WORLD_SIZE, args),
-             nprocs=WORLD_SIZE,
-             join=True)
+    train(args)
