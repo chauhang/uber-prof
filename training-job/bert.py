@@ -433,20 +433,23 @@ if __name__ == "__main__":
 
     resume_from_checkpoint = False
 
+    checkpoint_list = []
     if dict_args["resume"]:
-        resume_from_checkpoint = True
-
-    if resume_from_checkpoint:
         checkpoint_list = glob.glob("epoch=*-step=*.ckpt")
         if len(checkpoint_list) == 0:
-            raise Exception("Checkpoint doesn't exist")
-        else:
-            trainer = pl.Trainer.from_argparse_args(
-                args,
-                callbacks=[lr_logger, early_stopping, checkpoint_callback],
-                resume_from_checkpoint=checkpoint_list[0],
-                checkpoint_callback=True,
+            logging.error(
+                "Resume Argument provided. But checkpoint not found.. Starting fresh training"
             )
+        else:
+            resume_from_checkpoint = True
+
+    if resume_from_checkpoint:
+        trainer = pl.Trainer.from_argparse_args(
+            args,
+            callbacks=[lr_logger, early_stopping, checkpoint_callback],
+            resume_from_checkpoint=checkpoint_list[0],
+            checkpoint_callback=True,
+        )
     else:
         trainer = pl.Trainer.from_argparse_args(
             args,
