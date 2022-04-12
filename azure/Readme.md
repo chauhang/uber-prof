@@ -32,6 +32,8 @@ Navigate to uber-prof/azure
 
 Modify params.json as required and run the below command to create cluster.
 
+Note: Make sure resource group, VN, Subnets are created and available.
+
 ```bash
 cyclecloud import_cluster <cluster-name> -c Slurm -f template.txt -p params.json
 ```
@@ -95,4 +97,10 @@ sbatch check.slurm
 ```
 
 ## Dashboard
+
+Grafana can be accessed from http://<Headnode-ip>:3000
+
+Import telegraf dashboard and dcgm dasboard to grafana from the json file available in uber-prof/azure folder.
+
+Note: Allow port 3000 on headnode for granfana dashboard
 
