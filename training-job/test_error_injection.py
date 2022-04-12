@@ -1,20 +1,16 @@
+import logging as log
+import os
+import queue
+from ctypes import *
+
+import dcgm_structs
 import pydcgm
 import pytest
-import time
-import os
-import logger
-import dcgm_structs
-import dcgm_structs_internal
-import queue
-import dcgm_fields
-import logging as log
-from ctypes import *
+
 from utils import (
-    wait_for_slurm_log,
     wait_for_training_start,
     start_training,
     inject_error,
-    check_dcgm_error,
     read_dcgm_errors_file,
     cancel_dcgm_job,
     get_checkpoint_file,
