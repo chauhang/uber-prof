@@ -4,7 +4,11 @@
 
 - Create a azure VM instance and install cyclecloud.
 
+Make sure to enable System assigned managed identity for the VM instance.
+
 Refer: <https://docs.microsoft.com/en-us/azure/cyclecloud/how-to/install-manual?view=cyclecloud-8>
+
+Note: Add contributor role to VM instance from Identity tab in VM and allow 8080 port.
 
 - Install cyclecloud cli.
 
