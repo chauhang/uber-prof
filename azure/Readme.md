@@ -3,6 +3,7 @@
 ## Prerequisites
 
 - Create a azure VM instance and install cyclecloud.
+
 Refer: <https://docs.microsoft.com/en-us/azure/cyclecloud/how-to/install-manual?view=cyclecloud-8>
 
 - Install cyclecloud cli.
@@ -19,12 +20,20 @@ cd /tmp/cyclecloud-cli-installer
 
 Run `cyclecloud initialize` and enter credentials and cyclecloud domain name.
 
+## Clone uber-prof repo
+
+```bash
+git clone https://github.com/chauhang/uber-prof
+```
+
 ## Create slurm cluster
+
+Navigate to uber-prof/azure
 
 Modify params.json as required and run the below command to create cluster.
 
 ```bash
-cyclecloud create_cluster <cluster-name> -p params.json
+cyclecloud import_cluster <cluster-name> -c Slurm -f template.txt -p params.json
 ```
 
 ## Upload project
@@ -40,7 +49,7 @@ Default Locker: cyclecloud
 cyclecloud project upload
 ```
 
-Similarly upload the compute node project form uber-prof/azure/cluster-init/compute path
+Similarly upload the compute node project from uber-prof/azure/cluster-init/compute path
 
 ```bash
 cyclecloud project info
@@ -51,22 +60,39 @@ Default Locker: cyclecloud
 cyclecloud project upload
 ```
 
-## Training Job
-
-### Install packages
-
-Navigate to uber-prof/training-job
-
-Run conda update
+## SSH into Head node
 
 ```bash
+cyclecloud connect scheduler -c <cluster-name>
+```
+
+If conda environment is not activated
+
+Run `conda init bash` then exit and login again.
+
+## Install packages
+
+Clone uber-prof repo and run conda update
+
+```bash
+git clone https://github.com/chauhang/uber-prof
+cd uber-prof/training-job
 conda env update -f environment.yml
 ```
 
+## Training Job
+
 Modify the bert.azure file with bert.azure file for cluster configs
+
+```bash
+sbatch bert.azure
+```
 
 ## Running tests
 
 ```bash
 sbatch check.slurm
 ```
+
+## Dashboard
+

@@ -12,7 +12,7 @@
 ## Cluster Configuration File ##
 ################################
 
-[cluster SlurmCustom]
+[cluster Slurm]
 IconUrl = static/cloud/cluster/ui/ClusterIcon/slurm.png
 FormLayout = selectionpanel
 Category = Schedulers
