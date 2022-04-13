@@ -47,10 +47,10 @@ def setup():
     cancel_dcgm_job(job_id)
 
 
-def test_dcgm(setup):
+def test_dcgm_xid_error_injection(setup):
     _, _, job_id = setup
     log.debug("Intializing DCGM")
-    dcgmHandle = pydcgm.DcgmHandle(ipAddress="queue0-st-queue0-p38xlarge-1")
+    dcgmHandle = pydcgm.DcgmHandle(ipAddress=HOST)
     dcgmSystem = dcgmHandle.GetSystem()
     dcgmSystem.GetAllGroupIds()
     supportedGPUs = dcgmSystem.discovery.GetAllSupportedGpuIds()
