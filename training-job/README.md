@@ -80,10 +80,10 @@ Set SLURM handle signals.
 
   | Name       | Type      | Params
 -----------------------------------------
-0 | bert_model | BertModel | 109 M 
-1 | drop       | Dropout   | 0     
-2 | fc1        | Linear    | 393 K 
-3 | out        | Linear    | 2.1 K 
+0 | bert_model | BertModel | 109 M
+1 | drop       | Dropout   | 0
+2 | fc1        | Linear    | 393 K
+3 | out        | Linear    | 2.1 K
 -----------------------------------------
 395 K     Trainable params
 109 M     Non-trainable params
@@ -107,9 +107,9 @@ Metric val_loss improved by 0.002 >= min_delta = 0.0. New best score: 1.203
 Epoch 4: 100%|██████████| 27/27 [00:01<00:00, 21.59it/s, loss=1.17, v_num=232] to "/shared/uber-prof/training-job/epoch=3-step=87.ckpt" as top 1
 Metric val_loss improved by 0.127 >= min_delta = 0.0. New best score: 1.075
 Epoch 4: 100%|██████████| 27/27 [00:05<00:00,  5.02it/s, loss=1.17, v_num=232]l to "/shared/uber-prof/training-job/epoch=4-step=109-v1.ckpt" as top 1
-print ================ Running epilog ===============    
+print ================ Running epilog ===============
 Successfully stopped recording stats for 232.
-Successfully retrieved statistics for job: 232. 
+Successfully retrieved statistics for job: 232.
 +------------------------------------------------------------------------------+
 | GPU ID: 0                                                                    |
 +====================================+=========================================+
@@ -151,21 +151,28 @@ Successfully retrieved statistics for job: 232.
 Successfully removed group 23
 ```
 
+## Job Log
+
+![Slurm Log](Job_log.gif)
+
+## Dashboards
+
+![Dashboard](Dashboards.gif)
+
 ## Error injection tests
 
 Update the HOST details in [test_error_injection.py](test_error_injection.py) based on your environment.
 
-Run the following command 
+Run the following command
 
-```
-pytest test_error_injection.py 
+```bash
+pytest test_error_injection.py
 ```
 
 To add any new error, add entries to the [dcgm_errors.json](dcgm_errors.json) file.
 
-
 To run the test in debug mode - run the following command
 
-```
-pytest -sv --log-cli-level=DEBUG test_error_injection.py 
+```bash
+pytest -sv --log-cli-level=DEBUG test_error_injection.py
 ```
