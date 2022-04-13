@@ -7,4 +7,7 @@
 
 
 ### the command to run
-srun torchrun --nproc_per_node=4 cifar.py
+dcgmi profile --pause
+srun --prolog job_prolog.sh --epilog job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true torchrun --nproc_per_node=4 cifar.py
+dcgmi profile --resume
+

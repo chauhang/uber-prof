@@ -4,3 +4,4 @@ sklearn
 pytorch_lightning
 transformers
 torchdata
+mosaicml
