@@ -20,6 +20,7 @@ export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
 
 python setup.py install
 
+cd "${HOME}"/packages || exit
 echo "Installing Torchtext"
 git clone https://github.com/pytorch/text torchtext
 cd torchtext || exit

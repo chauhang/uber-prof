@@ -18,7 +18,7 @@ chmod +x nccl-test.sh
 ./nccl-test.sh
 ```
 
-### IOR Benchmark for efa
+### IOR Benchmark for Lustre
 
 ```bash
 chmod +x ior-bechmark.sh

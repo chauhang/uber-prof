@@ -6,7 +6,6 @@ set -x
 
 # Remove older versions of dcgm
 sudo yum remove datacenter-gpu-manager -y
-
 # Upaate packages
 sudo yum update -y
 sudo yum groupinstall "Development Tools" -y

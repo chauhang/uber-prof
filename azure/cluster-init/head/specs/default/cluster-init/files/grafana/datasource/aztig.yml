@@ -1,0 +1,12 @@
+apiVersion: 1
+
+datasources:
+  - name: aztig
+    type: influxdb
+    access: proxy
+    database: monitor
+    user: $INFLUXDB_USER
+    password: "$INFLUXDB_PWD"
+    url: http://localhost:8086
+    jsonData:
+      httpMode: GET
