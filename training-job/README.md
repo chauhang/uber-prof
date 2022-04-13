@@ -151,14 +151,6 @@ Successfully retrieved statistics for job: 232.
 Successfully removed group 23
 ```
 
-## Job Log
-
-![Slurm Log](Job_log.gif)
-
-## Dashboards
-
-![Dashboard](Dashboards.gif)
-
 ## Error injection tests
 
 Update the HOST details in [test_error_injection.py](test_error_injection.py) based on your environment.

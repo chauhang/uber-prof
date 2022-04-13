@@ -167,11 +167,12 @@ Add new dashboard with loki data source with logs as visualization panel.
 
 ## [EFA Supported Instance Types](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa.html#efa-instance-types)
 
-
 ## Demo Videos
-### ![Grafana Dashboards](../../training-job/Dashboards.mp4)
 
-### ![Slurm Job Logs](../../training-job/Job_log.mp4)
+### [![Grafana Dashboard](Dashboards.gif)](https://youtu.be/KhvCCPjHwCY)
+
+### [![Slurm Log](Job_log.gif)](https://youtu.be/RzOkHsmRM3U)
+
 
 ## Tests
 
