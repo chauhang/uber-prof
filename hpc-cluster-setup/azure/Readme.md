@@ -10,6 +10,14 @@ Refer: <https://docs.microsoft.com/en-us/azure/cyclecloud/how-to/install-manual?
 
 Note: Add contributor role to VM instance from Identity tab in VM and allow 8080 port.
 
+## Steps to configure cyclecloud
+
+![Step 1:](./images/1.png)
+![Step 2:](./images/2.png)
+![Step 3:](./images/3.png)
+![Step 4:](./images/4.png)
+![Step 5:](./images/5.png)
+
 ## Prepare local machine for cycle cloud access
 
 - Install cyclecloud cli.
