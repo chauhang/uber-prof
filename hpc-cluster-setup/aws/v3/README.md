@@ -54,6 +54,8 @@ chmod 600 ~/.ssh/hpc-key
 
 ## Build dcgm
 
+Running error injection tests required dcgm debug verion. Below are the steps to build a debug verion of dcgm.
+
 ```bash
 chmod +x dcgm-build.sh
 ./dcgm-build.sh
@@ -68,6 +70,7 @@ Upload the built package from `_out` folder to a s3 bucket and update the url in
 ### Refer: [Cluster configuration v3](https://docs.aws.amazon.com/parallelcluster/latest/ug/cluster-configuration-file-v3.html)
 
 Note: Add Subnet with Public IP for headnode and Private IP for compute nodes.
+
 ## Create HPC cluster
 
 ```bash
@@ -172,7 +175,6 @@ Add new dashboard with loki data source with logs as visualization panel.
 ### [![Grafana Dashboard](Dashboards.gif)](https://youtu.be/KhvCCPjHwCY)
 
 ### [![Slurm Log](Job_log.gif)](https://youtu.be/RzOkHsmRM3U)
-
 
 ## Tests
 

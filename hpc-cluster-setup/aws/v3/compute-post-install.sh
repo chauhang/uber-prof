@@ -135,11 +135,15 @@ sudo nvswitch-audit
 
 # Download and Install Nvidia DCGM
 cd /lustre || exit
-wget -O datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm https://mlbucket-4d8b827c.s3.amazonaws.com/datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
-sudo rpm -i datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
+sudo yum install -y datacenter-gpu-manager
+
+# For running tests use debug verison of DCGM
+# wget -O datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm https://mlbucket-4d8b827c.s3.amazonaws.com/datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
+# sudo rpm -i datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
 
 # Start nv-hostengine
 sudo -u root nv-hostengine -b 0
+
 
 # Install EFA Exporter
 sudo /usr/bin/python3 -m pip install --upgrade pip
