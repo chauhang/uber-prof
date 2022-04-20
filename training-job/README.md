@@ -168,3 +168,9 @@ To run the test in debug mode - run the following command
 ```bash
 pytest -sv --log-cli-level=DEBUG test_error_injection.py
 ```
+
+On event of GPU error while the job is running, the job halts for sometime and continues to run.
+
+## Node failure tests
+
+Terminating the compute nodes while the job is running with will cancel the job and reschedules the job with the same job id.
