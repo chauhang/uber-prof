@@ -4,8 +4,5 @@ sklearn
 pytorch_lightning
 transformers
 torchdata
-<<<<<<< HEAD
 mosaicml
-=======
 torchvision
->>>>>>> main
