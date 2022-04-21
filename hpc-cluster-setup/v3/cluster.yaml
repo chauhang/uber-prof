@@ -44,8 +44,8 @@ Scheduling:
       ComputeResources:
         - Name: queue0-p4d24xlarge
           InstanceType: p4d.24xlarge
-          MaxCount: 4
-          MinCount: 2
+          # MaxCount: 4
+          # MinCount: 2
           Efa:
             Enabled: true
       Iam:

@@ -31,6 +31,8 @@ Change profiler setting in `bert.slurm` file
 sbatch bert.slurm
 ```
 
+Note: Make sure the modify no. of nodes, no. of GPUs in bert.slurm. Also comment `FI_PROVIDER` in case `EFA` is not used.
+
 output
 
 ```bash
@@ -155,17 +157,16 @@ Successfully removed group 23
 
 Update the HOST details in [test_error_injection.py](test_error_injection.py) based on your environment.
 
-Run the following command 
+Run the following command
 
-```
-pytest test_error_injection.py 
+```bash
+pytest test_error_injection.py
 ```
 
 To add any new error, add entries to the [dcgm_errors.json](dcgm_errors.json) file.
 
-
 To run the test in debug mode - run the following command
 
-```
-pytest -sv --log-cli-level=DEBUG test_error_injection.py 
+```bash
+pytest -sv --log-cli-level=DEBUG test_error_injection.py
 ```
