@@ -1,0 +1,18 @@
+[
+  {
+    "labels": {
+      "job": "node-1"
+    },
+    "targets": [
+      "hpc-new-hpc-pg0-1:9400"
+    ]
+  },
+  {
+    "labels": {
+      "job": "node-2"
+    },
+    "targets": [
+      "hpc-new-hpc-pg0-2:9400"
+    ]
+  }
+]
