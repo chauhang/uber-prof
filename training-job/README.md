@@ -82,10 +82,10 @@ Set SLURM handle signals.
 
   | Name       | Type      | Params
 -----------------------------------------
-0 | bert_model | BertModel | 109 M 
-1 | drop       | Dropout   | 0     
-2 | fc1        | Linear    | 393 K 
-3 | out        | Linear    | 2.1 K 
+0 | bert_model | BertModel | 109 M
+1 | drop       | Dropout   | 0
+2 | fc1        | Linear    | 393 K
+3 | out        | Linear    | 2.1 K
 -----------------------------------------
 395 K     Trainable params
 109 M     Non-trainable params
@@ -109,9 +109,9 @@ Metric val_loss improved by 0.002 >= min_delta = 0.0. New best score: 1.203
 Epoch 4: 100%|██████████| 27/27 [00:01<00:00, 21.59it/s, loss=1.17, v_num=232] to "/shared/uber-prof/training-job/epoch=3-step=87.ckpt" as top 1
 Metric val_loss improved by 0.127 >= min_delta = 0.0. New best score: 1.075
 Epoch 4: 100%|██████████| 27/27 [00:05<00:00,  5.02it/s, loss=1.17, v_num=232]l to "/shared/uber-prof/training-job/epoch=4-step=109-v1.ckpt" as top 1
-print ================ Running epilog ===============    
+print ================ Running epilog ===============
 Successfully stopped recording stats for 232.
-Successfully retrieved statistics for job: 232. 
+Successfully retrieved statistics for job: 232.
 +------------------------------------------------------------------------------+
 | GPU ID: 0                                                                    |
 +====================================+=========================================+
@@ -159,11 +159,11 @@ Update the HOST details in [test_error_injection.py](test_error_injection.py) ba
 
 Build and install dcgm from source. For more info - [click here](https://github.com/NVIDIA/DCGM#generating-a-dcgm-build)
 
-```
+```bash
 sudo rpm -i datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
 ```
 
-Run the following command 
+Run the following command
 
 ```bash
 pytest test_error_injection.py
@@ -179,10 +179,15 @@ pytest -sv --log-cli-level=DEBUG test_error_injection.py
 
 To verify the error injection using dcgm callback, use the following command
 
-Add dcgm binding to the python path 
+Add dcgm binding to the python path
 
-```
+```bash
 export PYTHONPATH=/usr/local/dcgm/bindings/python3/
-pytest -sv --log-cli-level=DEBUG test_error_injection_using_callback.py 
+pytest -sv --log-cli-level=DEBUG test_error_injection_using_callback.py
 ```
 
+On event of GPU error while the job is running, the job halts for sometime and continues to run.
+
+## Node failure tests
+
+Terminating the compute nodes while the job is running with will cancel the job and reschedules the job with the same job id.
