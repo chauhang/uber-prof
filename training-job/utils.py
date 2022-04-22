@@ -3,6 +3,7 @@ import os
 import time
 import json
 import logging as log
+import glob
 
 
 def run_command(cmd: str):
@@ -26,13 +27,15 @@ def wait_for_slurm_log(job_id: str, iteration: int = 30, sleep: int = 10):
         return False
 
 
-def wait_for_training_start(log_file: str, iteration: int = 30, sleep: int = 10):
+def wait_for_training_start(
+    log_file: str, iteration: int = 30, sleep: int = 10, search_string: str = "Epoch 0"
+):
     log.debug("{} Training {}".format("*" * 50, "*" * 50))
     for _ in range(iteration):
-        log.debug("Waiting for training to get started")
+        log.debug("Waiting for {}".format(search_string))
         with open(log_file) as fp:
             data = fp.read()
-        if "Epoch 0" in data:
+        if search_string in data:
             log.debug("Training start found\n")
             return True
         else:
@@ -52,9 +55,6 @@ def start_training(slurm_script):
         log.debug("Retreived Job ID: {}".format(job_id))
         log.debug("Slurm job started successfully \n")
         slurm_log_file: str = wait_for_slurm_log(job_id=job_id)
-        training_status = wait_for_training_start(log_file=slurm_log_file)
-        if not training_status:
-            raise Exception("Training start not detected")
     return slurm_log_file, job_id
 
 
@@ -117,3 +117,26 @@ def cancel_dcgm_job(job_id):
     else:
         log.debug("Unable to cancel the existing job")
         return False
+
+
+def get_checkpoint_file(checkpoint_pattern: str):
+    log.debug("{} Identifying checkpoints {}".format("*" * 50, "*" * 50))
+    check_point_list: list = glob.glob(checkpoint_pattern)
+
+    if len(check_point_list) == 0:
+        raise FileNotFoundError("Checkpoint with pattern - {} not found".format(checkpoint_pattern))
+    elif len(check_point_list) > 1:
+        raise ValueError(
+            "More than one checkpoint present for same epoch - {}".format(checkpoint_pattern)
+        )
+    else:
+        log.debug("Checkpoint - {} Found".format(check_point_list[0]))
+        return check_point_list[0]
+
+
+def remove_checkpoint_files():
+    log.debug("{} Removing existing checkpoints {}".format("*" * 50, "*" * 50))
+    check_point_list: list = glob.glob("*.ckpt")
+    for checkpoint in check_point_list:
+        log.debug("Removing - {}".format(checkpoint))
+        os.remove(checkpoint)

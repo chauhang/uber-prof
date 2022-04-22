@@ -157,7 +157,13 @@ Successfully removed group 23
 
 Update the HOST details in [test_error_injection.py](test_error_injection.py) based on your environment.
 
-Run the following command
+Build and install dcgm from source. For more info - [click here](https://github.com/NVIDIA/DCGM#generating-a-dcgm-build)
+
+```
+sudo rpm -i datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
+```
+
+Run the following command 
 
 ```bash
 pytest test_error_injection.py
@@ -170,3 +176,13 @@ To run the test in debug mode - run the following command
 ```bash
 pytest -sv --log-cli-level=DEBUG test_error_injection.py
 ```
+
+To verify the error injection using dcgm callback, use the following command
+
+Add dcgm binding to the python path 
+
+```
+export PYTHONPATH=/usr/local/dcgm/bindings/python3/
+pytest -sv --log-cli-level=DEBUG test_error_injection_using_callback.py 
+```
+
