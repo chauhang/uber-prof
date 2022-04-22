@@ -13,6 +13,7 @@ fi
 
 chown -R ec2-user:ec2-user /lustre
 
+source /lustre/.conda/etc/profile.d/conda.sh
 sudo -u ec2-user /lustre/.conda/bin/conda init bash
 
 # Override run_instance attributes for capacity reservation

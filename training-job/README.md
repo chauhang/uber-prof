@@ -31,6 +31,8 @@ Change profiler setting in `bert.slurm` file
 sbatch bert.slurm
 ```
 
+Note: Make sure the modify no. of nodes, no. of GPUs in bert.slurm. Also comment `FI_PROVIDER` in case `EFA` is not used.
+
 output
 
 ```bash
@@ -163,17 +165,16 @@ sudo rpm -i datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
 
 Run the following command 
 
-```
-pytest test_error_injection.py 
+```bash
+pytest test_error_injection.py
 ```
 
 To add any new error, add entries to the [dcgm_errors.json](dcgm_errors.json) file.
 
-
 To run the test in debug mode - run the following command
 
-```
-pytest -sv --log-cli-level=DEBUG test_error_injection.py 
+```bash
+pytest -sv --log-cli-level=DEBUG test_error_injection.py
 ```
 
 To verify the error injection using dcgm callback, use the following command
