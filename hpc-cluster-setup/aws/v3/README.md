@@ -39,39 +39,45 @@ aws s3 cp compute-post-install.sh s3://mlbucket-${BUCKET_POSTFIX}
 upload: ./post-install.sh to s3://mlbucket-057bf1b1/compute-post-install.sh
 ```
 
-# Create VPC
+## Create VPC
 
 ```bash
 aws cloudformation create-stack --stack-name VPC-Large-Scale --template-body file://VPC-Large-Scale.yml
 ```
 
-## Create key-pair for hpc cluster
+### Create key-pair for hpc cluster
 
 ```bash
 aws ec2 create-key-pair --key-name hpc-key --query KeyMaterial --output text > ~/.ssh/hpc-key
 chmod 600 ~/.ssh/hpc-key
 ```
 
-## Build dcgm
+### Build dcgm from source
 
 Running error injection tests required dcgm debug verion. Below are the steps to build a debug verion of dcgm.
 
 ```bash
+git clone https://github.com/NVIDIA/DCGM
+
+cd DCGM/dcgmbuild
 chmod +x dcgm-build.sh
 ./dcgm-build.sh
+
+cd ..
+./build.sh -d --rpm
 ```
 
 Upload the built package from `_out` folder to a s3 bucket and update the url in `compute-post-install.sh` script.
 
-## Edit cluster config yaml
+### Edit cluster config yaml
 
-### Modify the cluster.yaml to suit your requirement
+#### Modify the cluster.yaml to suit your requirement
 
-### Refer: [Cluster configuration v3](https://docs.aws.amazon.com/parallelcluster/latest/ug/cluster-configuration-file-v3.html)
+#### Refer: [Cluster configuration v3](https://docs.aws.amazon.com/parallelcluster/latest/ug/cluster-configuration-file-v3.html)
 
 Note: Add Subnet with Public IP for headnode and Private IP for compute nodes.
 
-## Create HPC cluster
+### Create HPC cluster
 
 ```bash
 # Create hpc cluster
@@ -93,23 +99,57 @@ Output
 }
 ```
 
-## Create a IAM user account
+### Update cluster
+
+#### Stop cluster
+
+```bash
+pcluster update-compute-fleet --cluster-name my-hpc-cluster --status STOP_REQUESTED
+```
+
+#### Update cluster config
+
+Edit `MaxCount` and `MinCount` of ComputeResources in cluster.yaml as below
+
+```yaml
+MaxCount: 4
+MinCount: 2
+```
+
+```bash
+pcluster update-cluster --cluster-name my-hpc-cluster --cluster-configuration cluster.yaml
+```
+
+#### Start cluster
+
+```bash
+pcluster update-compute-fleet --cluster-name my-hpc-cluster --status START_REQUESTED
+```
+
+### Create a IAM user account
 
 Create an IAM user account with programmatic credentials and assign the AWS Managed Policy `AmazonEC2ReadOnlyAccess`, `AmazonS3ReadOnlyAccess`, `CloudWatchLogsReadOnlyAccess`, `CloudWatchReadOnlyAccess`
 
-## Modify the prometheus.yaml
+### Modify the prometheus.yaml
 
 1. Update prom-config-example.yaml with region and accesskey, secretkey from above created user account.
 2. Ssh into head node
 3. Replace the contents of `/home/ec2-user/aws-parallelcluster-monitoring/prometheus` with updated prom-config-example.yaml
 
-## Restart docker compose
+### Restart docker compose
 
 ```bash
 docker-compose --env-file /etc/parallelcluster/cfnconfig -f ~/aws-parallelcluster-monitoring/docker-compose/docker-compose.master.yml -p monitoring-master restart
 ```
 
-## For Standalone DCGM Exported
+### Dasboards
+
+Grafana dashboard: https://ec2-<ip>.<region>.compute.amazonaws.com/grafana/login
+Prometheus dashboard: https://ec2-<ip>.<region>.compute.amazonaws.com/prometheus/graph
+
+Note: Add inboud rule for port 80 and 443 to headnode security group for grafana and prometheus access.
+
+### For Standalone DCGM Exported
 
 Import the below dashboard into grafana
 
@@ -117,7 +157,7 @@ Import the below dashboard into grafana
 
 ## Add Slum Job Log to Grafana
 
-### Download loki and promtail
+#### Download loki and promtail
 
 ```bash
 wget https://github.com/grafana/loki/releases/download/v2.4.2/loki-linux-amd64.zip
@@ -127,20 +167,20 @@ unzip loki-linux-amd64.zip
 unzip promtail-linux-amd64.zip
 ```
 
-### Download loki and promtail configs
+#### Download loki and promtail configs
 
 ```bash
 wget https://raw.githubusercontent.com/grafana/loki/master/cmd/loki/loki-local-config.yaml
 wget https://raw.githubusercontent.com/grafana/loki/main/clients/cmd/promtail/promtail-local-config.yaml
 ```
 
-### Start loki
+#### Start loki
 
 ```bash
 ./loki-linux-amd64 --config.file=loki-local-config.yaml &
 ```
 
-### Add the slum job output file path to promtail-local-config.yaml
+#### Add the slum job output file path to promtail-local-config.yaml
 
 ```bash
   - targets:
@@ -150,17 +190,17 @@ wget https://raw.githubusercontent.com/grafana/loki/main/clients/cmd/promtail/pr
       __path__: /lustre/uber-prof/training-job/*.out
 ```
 
-### Start promtail
+#### Start promtail
 
 ```bash
 ./promtail-linux-amd64 --config.file=promtail-local-config.yaml &
 ```
 
-### Add loki datasource to Grafana
+#### Add loki datasource to Grafana
 
 ![Add datasource](./images/loki_datasource.png)
 
-### Add new dashboard
+#### Add new dashboard
 
 Add new dashboard with loki data source with logs as visualization panel.
 
@@ -168,7 +208,7 @@ Add new dashboard with loki data source with logs as visualization panel.
 
 ![Add dashboard panel](./images/dashboard_panel.png)
 
-## [EFA Supported Instance Types](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa.html#efa-instance-types)
+### [EFA Supported Instance Types](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa.html#efa-instance-types)
 
 ## Demo Videos
 
@@ -176,6 +216,6 @@ Add new dashboard with loki data source with logs as visualization panel.
 
 ### [![Slurm Log](Job_log.gif)](https://youtu.be/RzOkHsmRM3U)
 
-## Tests
+### Tests
 
 Refer [tests](./tests) folder for NCCL and fsx tests.

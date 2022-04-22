@@ -31,6 +31,8 @@ Change profiler setting in `bert.slurm` file
 sbatch bert.slurm
 ```
 
+Note: Make sure the modify no. of nodes, no. of GPUs in bert.slurm. Also comment `FI_PROVIDER` in case `EFA` is not used.
+
 output
 
 ```bash
