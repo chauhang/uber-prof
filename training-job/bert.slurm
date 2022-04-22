@@ -39,5 +39,5 @@ export NCCL_SOCKET_IFNAME="en,eth,em,bond"
 
 ### the command to run
 dcgmi profile --pause
-srun --prolog job_prolog.sh --epilog job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true python bert.py --strategy=ddp --num_nodes=2 --gpus=8 --max_epochs=15
+srun --prolog job_prolog.sh --epilog job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true python bert.py --strategy=ddp --num_nodes=2 --gpus=8 --max_epochs=15 --resume True
 dcgmi profile --resume
