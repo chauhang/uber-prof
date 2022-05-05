@@ -77,6 +77,25 @@ Upload the built package from `_out` folder to a s3 bucket and update the url in
 
 Note: Add Subnet with Public IP for headnode and Private IP for compute nodes.
 
+Create capacity reservation policy for Instance reservation
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "RunInstancesInCapacityReservation",
+            "Effect": "Allow",
+            "Action": "ec2:RunInstances",
+            "Resource": [
+                "arn:aws:ec2:<region>:<account-id>:capacity-reservation/*",
+                "arn:aws:resource-groups:<region>:<account-id>:group/*"
+            ]
+        }
+    ]
+}
+```
+
 ### Create HPC cluster
 
 ```bash
