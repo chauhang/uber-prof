@@ -78,6 +78,7 @@ Upload the built package from `_out` folder to a s3 bucket and update the url in
 Note: Add Subnet with Public IP for headnode and Private IP for compute nodes.
 
 Create capacity reservation policy for Instance reservation
+Optional: Required for using reserved intances
 
 ```json
 {
