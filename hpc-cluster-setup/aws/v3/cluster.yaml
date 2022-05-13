@@ -21,10 +21,6 @@ HeadNode:
       Size: 150
   Networking:
     SubnetId: subnet-072c93863e2163515
-  Dcv:
-    Enabled: true
-    Port: 8443
-    AllowedIps: 0.0.0.0/0
   CustomActions:
     OnNodeConfigured:
       Script: s3://mlbucket-057bf1b1/head-post-install.sh
@@ -36,6 +32,10 @@ Scheduling:
   Scheduler: slurm
   SlurmQueues:
     - Name: queue0
+      ComputeSettings:
+        LocalStorage:
+          EphemeralVolume:
+            MountDir: /scratch
       Networking:
         SubnetIds:
           - subnet-01b6f2a414cc350bc
