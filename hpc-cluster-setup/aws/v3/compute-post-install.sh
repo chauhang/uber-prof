@@ -6,81 +6,6 @@ set -x
 
 # Remove older versions of dcgm
 sudo yum remove datacenter-gpu-manager -y
-# Upaate packages
-sudo yum update -y
-sudo yum groupinstall "Development Tools" -y
-sudo yum install wget kernel-devel-$(uname -r) kernel-headers-$(uname -r) -y
-# sudo yum install gcc10 kernel-devel kernel-headers -y
-
-# Fix Polkit Privilege Escalation Vulnerability
-chmod 0755 /usr/bin/pkexec
-
-export INSTALL_ROOT=${HOME}
-
-mkdir -p "$INSTALL_ROOT"/packages
-cd "$INSTALL_ROOT"/packages || exit
-
-export EFA_INSTALLER_FN=aws-efa-installer-latest.tar.gz
-echo "Installing EFA " $EFA_INSTALLER_FN
-
-wget https://s3-us-west-2.amazonaws.com/aws-efa-installer/$EFA_INSTALLER_FN
-tar -xf $EFA_INSTALLER_FN
-cd aws-efa-installer || exit
-sudo ./efa_installer.sh -y
-
-# echo "Installing CUDA"
-cd "$INSTALL_ROOT"/packages || exit
-wget https://developer.download.nvidia.com/compute/cuda/11.3.0/local_installers/cuda_11.3.0_465.19.01_linux.run
-chmod +x cuda_11.3.0_465.19.01_linux.run
-sudo ./cuda_11.3.0_465.19.01_linux.run --silent --override --toolkit --samples --no-opengl-libs
-
-export PATH="/usr/local/cuda/bin:/opt/amazon/openmpi/bin:/opt/amazon/efa/bin:$PATH"
-export LD_LIBRARY_PATH="/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
-
-echo 'Building nccl'
-cd "$INSTALL_ROOT"/packages || exit
-git clone https://github.com/NVIDIA/nccl.git || echo ignored
-cd nccl || exit
-git checkout tags/v2.11.4-1 -b v2.11.4-1
-# Choose compute capability 70 for Tesla V100 and 80 for Tesla A100
-# Refer https://en.wikipedia.org/wiki/CUDA#Supported_GPUs for different architecture
-make -j src.build NVCC_GENCODE="-gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_80,code=sm_80"
-make pkg.txz.build
-cd build/pkg/txz || exit
-
-tar xvfJ nccl_2.11.4-1+cuda11.3_x86_64.txz
-sudo cp -r nccl_2.11.4-1+cuda11.3_x86_64/include/* /usr/local/cuda/include/
-sudo cp -r nccl_2.11.4-1+cuda11.3_x86_64/lib/* /usr/local/cuda/lib64/
-
-echo 'Building aws-ofi-nccl'
-cd "$INSTALL_ROOT"/packages || exit
-git clone https://github.com/aws/aws-ofi-nccl.git || echo exists
-cd aws-ofi-nccl || exit
-git checkout aws
-git pull
-./autogen.sh
-
-./configure --prefix=/usr --with-mpi=/opt/amazon/openmpi --with-libfabric=/opt/amazon/efa/ --with-cuda=/usr/local/cuda --with-nccl=$INSTALL_ROOT/packages/nccl/build
-
-sudo yum install libudev-devel -y
-PATH=/opt/amazon/efa/bin:$PATH LDFLAGS="-L/opt/amazon/efa/lib64" make MPI=1 MPI_HOME=/opt/amazon/openmpi CUDA_HOME=/usr/local/cuda NCCL_HOME=$INSTALL_ROOT/packages/nccl/build
-sudo make install
-
-sudo sh -c 'echo "/opt/amazon/openmpi/lib64/" > mpi.conf'
-sudo sh -c 'echo "$INSTALL_ROOT/packages/nccl/build/lib/" > nccl.conf'
-sudo sh -c 'echo "/usr/local/cuda/lib64/" > cuda.conf'
-sudo ldconfig
-
-cd /usr/local/lib || exit
-sudo rm -f ./libmpi.so
-sudo ln -s /opt/amazon/openmpi/lib64/libmpi.so ./libmpi.s
-
-
-echo 'installing NCCL'
-cd "$INSTALL_ROOT"/packages || exit
-git clone https://github.com/NVIDIA/nccl-tests.git || echo ignored
-cd nccl-tests || exit
-make MPI=1 MPI_HOME=/opt/amazon/openmpi CUDA_HOME=/usr/local/cuda NCCL_HOME="$INSTALL_ROOT"/packages/nccl/build
 
 # Set Environment variables
 export CUDA_HOME=/usr/local/cuda
@@ -116,52 +41,6 @@ LD_LIBRARY_PATH=$CUDA_HOME/lib:$CUDA_HOME/lib64:$EFA_HOME/lib64:$MPI_HOME/lib64:
 #     --hostfile my-hosts -n 8 -N 8 \
 #     --mca pml ^cm --mca btl tcp,self --mca btl_tcp_if_exclude lo,docker0 --bind-to none \
 #     $INSTALL_ROOT/packages/nccl-tests/build/all_reduce_perf -b 8 -e 1G -f 2 -g 1 -c 1 -n 100
-
-# Install Fabric Manager
-nvidia_info=$(find /usr/lib/modules -name nvidia.ko)
-nvidia_version=$(modinfo "$nvidia_info" | grep ^version | awk '{print $2}')
-sudo yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo
-sudo yum clean all
-# sudo wget -O /tmp/NVIDIA-Linux-driver.run https://us.download.nvidia.com/tesla/${nvidia_version}/NVIDIA-Linux-x86_64-${nvidia_version}.run
-# sudo CC=gcc10-cc sh /tmp/NVIDIA-Linux-driver.run -q -a --ui=none
-sudo curl -O https://developer.download.nvidia.com/compute/nvidia-driver/redist/fabricmanager/linux-x86_64/fabricmanager-linux-x86_64-${nvidia_version}-archive.tar.xz
-sudo tar xf fabricmanager-linux-x86_64-"${nvidia_version}"-archive.tar.xz -C /tmp
-sudo rsync -al /tmp/fabricmanager-linux-x86_64-"${nvidia_version}"-archive/ /usr/ --exclude LICENSE
-sudo mv /usr/systemd/nvidia-fabricmanager.service /usr/lib/systemd/system
-sudo systemctl enable nvidia-fabricmanager && sudo systemctl start nvidia-fabricmanager
-
-# Verifying GPU Routing
-sudo nvswitch-audit
-
-# Download and Install Nvidia DCGM
-cd /lustre || exit
-sudo yum install -y datacenter-gpu-manager
-
-# For running tests use debug verison of DCGM
-# wget -O datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm https://mlbucket-4d8b827c.s3.amazonaws.com/datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
-# sudo rpm -i datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
-
-# Start nv-hostengine
-sudo -u root nv-hostengine -b 0
-
-
-# Install EFA Exporter
-sudo /usr/bin/python3 -m pip install --upgrade pip
-sudo pip3 install boto3
-sudo yum install amazon-cloudwatch-agent -y
-git clone https://github.com/aws-samples/aws-efa-nccl-baseami-pipeline.git /tmp/aws-efa-nccl-baseami
-sudo mv /tmp/aws-efa-nccl-baseami/nvidia-efa-ami_base/cloudwatch /opt/aws/
-sudo mv /opt/aws/cloudwatch/aws-hw-monitor.service /lib/systemd/system
-echo -e "#!/bin/sh\n" | sudo tee /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
-echo -e "/usr/bin/python3 /opt/aws/cloudwatch/nvidia/aws-hwaccel-error-parser.py &" | sudo tee -a /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
-echo -e "/usr/bin/python3 /opt/aws/cloudwatch/nvidia/accel-to-cw.py /opt/aws/cloudwatch/nvidia/nvidia-exporter >> /dev/null 2>&1 &\n" | sudo tee -a /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
-echo -e "/usr/bin/python3 /opt/aws/cloudwatch/efa/efa-to-cw.py /opt/aws/cloudwatch/efa/efa-exporter >> /dev/null 2>&1 &\n" | sudo tee -a /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
-sudo chmod +x /opt/aws/cloudwatch/aws-cloudwatch-wrapper.sh
-sudo cp /opt/aws/cloudwatch/nvidia/cwa-config.json /opt/aws/amazon-cloudwatch-agent/bin/config.json
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
-sudo systemctl enable aws-hw-monitor.service
-sudo systemctl start aws-hw-monitor.service
-sudo systemctl restart amazon-cloudwatch-agent.service
 
 #Load AWS Parallelcluster environment variables
 . /etc/parallelcluster/cfnconfig
