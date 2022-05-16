@@ -11,5 +11,6 @@ instance_type            = "p3.8xlarge"
 nvidia_driver_version    = "465.19.01"
 cuda_version             = "11.3.0"
 // cudnn_version            = "libcudnn8"
-nccl_version             = "v2.11.4-1"
-
+nccl_version             = "2.11.4"
+install_root             = "/home/ec2-user"
+efa_installer_fn         = "aws-efa-installer-latest.tar.gz"
