@@ -4,7 +4,11 @@ variable "ami_prefix"{
 }
 variable "instance_type"{
   type    = string
-  default = "p2.xlarge"
+  default = "p3.8xlarge"
+}
+variable "encrypt_boot"{
+  type    = bool
+  default = true
 }
 variable "aws_region"{
   type    = string

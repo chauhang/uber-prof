@@ -7,7 +7,11 @@ set -x
 # Remove older versions of dcgm
 sudo yum remove datacenter-gpu-manager -y
 
+# Fix Polkit Privilege Escalation Vulnerability
+chmod 0755 /usr/bin/pkexec
+
 # Set Environment variables
+export INSTALL_ROOT=/home/ec2-user
 export CUDA_HOME=/usr/local/cuda
 export EFA_HOME=/opt/amazon/efa
 export MPI_HOME=/opt/amazon/openmpi
@@ -41,6 +45,16 @@ LD_LIBRARY_PATH=$CUDA_HOME/lib:$CUDA_HOME/lib64:$EFA_HOME/lib64:$MPI_HOME/lib64:
 #     --hostfile my-hosts -n 8 -N 8 \
 #     --mca pml ^cm --mca btl tcp,self --mca btl_tcp_if_exclude lo,docker0 --bind-to none \
 #     $INSTALL_ROOT/packages/nccl-tests/build/all_reduce_perf -b 8 -e 1G -f 2 -g 1 -c 1 -n 100
+
+echo "Download and Install Nvidia DCGM"
+cd /lustre || exit
+sudo yum install -y datacenter-gpu-manager
+# For running tests use debug verison of DCGM
+# wget -O datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm https://mlbucket-4d8b827c.s3.amazonaws.com/datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
+# sudo rpm -i datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
+
+# Start nv-hostengine
+sudo -u root nv-hostengine -b 0
 
 #Load AWS Parallelcluster environment variables
 . /etc/parallelcluster/cfnconfig
