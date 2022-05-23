@@ -134,14 +134,6 @@ build {
     ]
   }
 
-  // Uncomment below line for p4d.24xlarge instance
-  // provisioner "shell" {
-  //   inline = [
-  //     "echo Verifying GPU Routing",
-  //     "sudo nvswitch-audit",
-  //   ]
-  // }
-
   provisioner "shell" {
     inline = [
       "echo Install EFA Exporter",

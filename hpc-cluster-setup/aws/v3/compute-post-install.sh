@@ -90,9 +90,6 @@ bash -x "${monitoring_home}/parallelcluster-setup/${setup_command}" >/tmp/monito
 source /lustre/.conda/etc/profile.d/conda.sh
 conda activate
 
-# Install PyTorch Release Version
-pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
-
 cat >> ~/.bashrc << EOF
 export PATH=/usr/local/cuda/bin:/opt/amazon/efa/bin:/lustre/.conda/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
