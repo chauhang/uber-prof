@@ -30,7 +30,12 @@ echo "====Testing all_reduce_perf====="
 echo "================================"
 # test all_reduce_perf
 bin=$INSTALL_ROOT/packages/nccl-tests/build/all_reduce_perf
-LD_LIBRARY_PATH=$CUDA_HOME/lib:$CUDA_HOME/lib64:$EFA_HOME/lib64:$MPI_HOME/lib64:$INSTALL_ROOT/packages/nccl/build/lib $bin -b 8 -e 128M -f 2 -g 8
+# -g no_of_gpus, -b min_bytes, -e max_bytes, -f step_factor
+LD_LIBRARY_PATH=$CUDA_HOME/lib:$CUDA_HOME/lib64:$EFA_HOME/lib64:$MPI_HOME/lib64:$INSTALL_ROOT/packages/nccl/build/lib $bin -b 8 -e 128M -f 2 -g 4
+
+# Uncomment below section for P4dn Instances
+# Verifying GPU Routing
+# sudo nvswitch-audit
 
 # TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
 # curl -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/local-ipv4 >> my-hosts
@@ -85,8 +90,11 @@ bash -x "${monitoring_home}/parallelcluster-setup/${setup_command}" >/tmp/monito
 source /lustre/.conda/etc/profile.d/conda.sh
 conda activate
 
+# Install PyTorch Release Version
+pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
+
 cat >> ~/.bashrc << EOF
-export PATH=/usr/local/cuda/bin:/lustre/.conda/bin:$PATH
+export PATH=/usr/local/cuda/bin:/opt/amazon/efa/bin:/lustre/.conda/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 export CUDNN_INCLUDE_DIR="/usr/local/cuda/include"

@@ -20,6 +20,10 @@ source "amazon-ebs" "amznlinux" {
     most_recent = true
     owners      = ["amazon"]
   }
+  aws_polling {
+    delay_seconds = 60
+    max_attempts  = 120
+  }
   ssh_username = "ec2-user"
 }
 
@@ -77,7 +81,7 @@ build {
       "tar xvfJ nccl_${var.nccl_version}*",
       "sudo cp -r nccl_${var.nccl_version}*/include/* /usr/local/cuda/include/",
       "sudo cp -r nccl_${var.nccl_version}*/lib/* /usr/local/cuda/lib64/",
-     ]
+    ]
   }
 
   provisioner "shell" {
@@ -101,7 +105,7 @@ build {
       "cd /usr/local/lib || exit",
       "sudo rm -f ./libmpi.so",
       "sudo ln -s /opt/amazon/openmpi/lib64/libmpi.so ./libmpi.s",
-      ]
+    ]
   }
 
   provisioner "shell" {
@@ -111,7 +115,7 @@ build {
       "git clone https://github.com/NVIDIA/nccl-tests.git || echo ignored",
       "cd nccl-tests || exit",
       "make MPI=1 MPI_HOME=/opt/amazon/openmpi CUDA_HOME=/usr/local/cuda NCCL_HOME=\"$install_root\"/packages/nccl/build",
-      ]
+    ]
   }
 
   provisioner "shell" {
@@ -127,7 +131,7 @@ build {
       "sudo mv /usr/systemd/nvidia-fabricmanager.service /usr/lib/systemd/system",
       // Uncomment below line for p4d.24xlarge instance
       // "sudo systemctl enable nvidia-fabricmanager && sudo systemctl start nvidia-fabricmanager",
-     ]
+    ]
   }
 
   // Uncomment below line for p4d.24xlarge instance
