@@ -16,7 +16,7 @@ do
   if [ $? -eq 0 ]; then
     ### Get the created GroupID ###
     groupid=$(echo "$group" | awk '{print $10}')
-    ### Enable DCGM Health Monitoring ###
+    ### Enable DCGM Background Health Monitoring ###
     ### This enables monitoring of all watches - PCIe, memory, infoROM, thermal and power and NVLink.
     sudo -u "$SLURM_JOB_USER" dcgmi health --host "$base_name$i" -g "$groupid" -s a
     ### Enable DCGM Statistics ###

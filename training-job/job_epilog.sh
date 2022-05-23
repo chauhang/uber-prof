@@ -12,6 +12,8 @@ do
   echo "print slurm_node: $base_name$i"
   ### Get GroupID ###
   groupid=$(sudo -u "$SLURM_JOB_USER" dcgmi group --host "$base_name$i" -l | awk 'FNR == 6 {print $3}')
+  ### Clear Healthcheck watches ###
+  sudo -u "$SLURM_JOB_USER" dcgmi health --host "$base_name$i" -g "$groupid" --clear
   ### Stop Recording Statistics ###
   sudo -u "$SLURM_JOB_USER" dcgmi stats --host "$base_name$i" -x "$SLURM_JOBID"
   ### Display Statistics ###
