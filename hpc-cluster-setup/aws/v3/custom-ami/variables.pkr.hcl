@@ -14,9 +14,9 @@ variable "aws_region" {
   type    = string
   default = "us-west-2"
 }
-variable "image_id" {
+variable "parallel_cluster_version" {
   type    = string
-  default = "ami-0ab1c5c5a157252e6"
+  default = "3.1.2"
 }
 variable "nvidia_driver_version" {
   type    = string

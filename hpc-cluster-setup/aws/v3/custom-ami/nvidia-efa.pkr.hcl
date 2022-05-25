@@ -15,7 +15,10 @@ source "amazon-ebs" "amznlinux" {
   encrypt_boot  = var.encrypt_boot
   source_ami_filter {
     filters = {
-      image-id = var.image_id
+      virtualization-type = "hvm"
+      name                = "aws-parallelcluster-${var.parallel_cluster_version}-amzn2-*"
+      architecture        = "x86_64"
+      root-device-type    = "ebs"
     }
     most_recent = true
     owners      = ["amazon"]
