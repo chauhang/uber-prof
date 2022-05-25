@@ -21,6 +21,6 @@ git checkout -b v1.11.0 v1.11.0
 git submodule sync
 git submodule update --init --recursive --jobs 0
 export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
-python setup.py build --cmake-only
+/lustre/.conda/bin/python setup.py build --cmake-only
 
-python setup.py install
+/lustre/.conda/bin/python setup.py install
