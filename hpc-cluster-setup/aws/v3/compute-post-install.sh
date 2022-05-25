@@ -144,9 +144,6 @@ sudo yum install -y datacenter-gpu-manager
 # Start nv-hostengine
 sudo -u root nv-hostengine -b 0
 
-# Install PyTorch Release Version
-pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
-
 # Install EFA Exporter
 sudo /usr/bin/python3 -m pip install --upgrade pip
 sudo pip3 install boto3

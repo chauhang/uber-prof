@@ -38,8 +38,8 @@ pip3 install --pre torch torchvision torchaudio --extra-index-url https://downlo
 ### For installing pytorch from source run the following command
 
 ```bash
-chmod +x install_PT1.10_from_src.sh
-./install_PT1.10_from_src.sh
+chmod +x install_pt.sh
+sbatch install_pt.slurm
 ```
 
 ### Install other required packages
