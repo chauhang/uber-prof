@@ -2,10 +2,11 @@
 ### e.g. request 4 nodes with 1 gpu each, totally 4 gpus (WORLD_SIZE==4)
 ### Note: --gres=gpu:x should equal to ntasks-per-node
 #SBATCH --nodes=2
-#SBATCH --ntasks-per-node=8
-#SBATCH --gres=gpu:8
+#SBATCH --ntasks-per-node=4
+#SBATCH --gres=gpu:4
 #SBATCH --mem=0
 #SBATCH --signal=SIGUSR1@90
+#SBATCH --cpus-per-task=8
 
 ### change 5-digit MASTER_PORT as you wish, slurm will raise Error if duplicated with others
 ### change WORLD_SIZE as gpus/node * num_nodes
@@ -39,5 +40,5 @@ export NCCL_SOCKET_IFNAME="en,eth,em,bond"
 
 ### the command to run
 dcgmi profile --pause
-srun --prolog job_prolog.sh --epilog job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true python bert.py --strategy=ddp --num_nodes=2 --gpus=8 --max_epochs=15 --resume True
+srun --prolog job_prolog.sh --epilog job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true python bert.py --strategy=ddp --num_nodes=2 --gpus=4 --max_epochs=15 --resume True
 dcgmi profile --resume

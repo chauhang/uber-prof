@@ -4,6 +4,7 @@
 #SBATCH --nodes=2
 #SBATCH --mem=0
 #SBATCH --signal=SIGUSR1@90
+#SBATCH --cpus-per-task=32
 
 
 ### the command to run
