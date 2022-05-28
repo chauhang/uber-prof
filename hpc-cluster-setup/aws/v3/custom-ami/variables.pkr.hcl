@@ -6,6 +6,10 @@ variable "instance_type" {
   type    = string
   default = "p3.8xlarge"
 }
+variable "subnet_id" {
+  type    = string
+  default = "subnet-0f8f8f8f"
+}
 variable "encrypt_boot" {
   type    = bool
   default = true

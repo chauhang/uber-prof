@@ -20,6 +20,7 @@ source "amazon-ebs" "amznlinux" {
       architecture        = "x86_64"
       root-device-type    = "ebs"
     }
+    subnet_id = var.subnet_id
     most_recent = true
     owners      = ["amazon"]
   }
@@ -41,6 +42,14 @@ build {
       "sudo yum update -y",
       "sudo yum groups mark install \"Development Tools\" -y",
       "sudo yum install git wget kernel-devel-$(uname -r) kernel-headers-$(uname -r) -y",
+      "echo blacklist vga16fb | sudo tee --append /etc/modprobe.d/blacklist.conf",
+      "echo blacklist nouveau | sudo tee --append /etc/modprobe.d/blacklist.conf",
+      "echo blacklist rivafb | sudo tee --append /etc/modprobe.d/blacklist.conf",
+      "echo blacklist nvidiafb | sudo tee --append /etc/modprobe.d/blacklist.conf",
+      "echo blacklist rivatv | sudo tee --append /etc/modprobe.d/blacklist.conf",
+      "echo 'GRUB_CMDLINE_LINUX="rdblacklist=nouveau"' | sudo tee -a /etc/default/grub",
+      "sudo grub2-mkconfig -o /boot/grub2/grub.cfg",
+      "sudo shutdown -r now"
     ]
   }
 
@@ -91,6 +100,7 @@ build {
     inline = [
       "echo Install AWS NCCL Plugin",
       "cd ${var.install_root}/packages || exit",
+      "sudo apt-get install libtool autoconf -y",
       "git clone https://github.com/aws/aws-ofi-nccl.git || echo exists",
       "cd aws-ofi-nccl || exit",
       "git checkout aws",
@@ -124,13 +134,11 @@ build {
   provisioner "shell" {
     inline = [
       "echo Install Fabric Manager",
-      "export NVIDIA_INFO=`find /usr/lib/modules -name nvidia.ko`",
-      "export NVIDIA_VERSION=`/usr/sbin/modinfo $NVIDIA_INFO | grep ^version | awk '{print $2}'`",
       "sudo yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-rhel7.repo",
       "sudo yum clean all",
-      "sudo curl -O https://developer.download.nvidia.com/compute/nvidia-driver/redist/fabricmanager/linux-x86_64/fabricmanager-linux-x86_64-$NVIDIA_VERSION-archive.tar.xz",
-      "sudo tar xf fabricmanager-linux-x86_64-$NVIDIA_VERSION-archive.tar.xz -C /tmp",
-      "sudo rsync -al /tmp/fabricmanager-linux-x86_64-$NVIDIA_VERSION-archive/ /usr/ --exclude LICENSE",
+      "sudo curl -O https://developer.download.nvidia.com/compute/nvidia-driver/redist/fabricmanager/linux-x86_64/fabricmanager-linux-x86_64-${var.nvidia_driver_version}-archive.tar.xz",
+      "sudo tar xf fabricmanager-linux-x86_64-${var.nvidia_driver_version}-archive.tar.xz -C /tmp",
+      "sudo rsync -al /tmp/fabricmanager-linux-x86_64-${var.nvidia_driver_version}-archive/ /usr/ --exclude LICENSE",
       "sudo mv /usr/systemd/nvidia-fabricmanager.service /usr/lib/systemd/system",
       // Uncomment below line for p4d.24xlarge instance
       // "sudo systemctl enable nvidia-fabricmanager && sudo systemctl start nvidia-fabricmanager",
