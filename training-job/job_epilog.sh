@@ -18,6 +18,8 @@ do
   sudo -u "$SLURM_JOB_USER" dcgmi stats --host "$base_name$i" -x "$SLURM_JOBID"
   ### Display Statistics ###
   sudo -u "$SLURM_JOB_USER" dcgmi stats --host "$base_name$i" -v -j "$SLURM_JOBID"
+  ### Display Topology ###
+  sudo -u "$SLURM_JOB_USER" dcgmi topo -g "$groupid"
   ### Delete Group ###
   sudo -u "$SLURM_JOB_USER" dcgmi group --host "$base_name$i" -d "$groupid"
 done

@@ -20,6 +20,9 @@ master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
 export MASTER_ADDR=$master_addr
 echo "MASTER_ADDR="$MASTER_ADDR
 
+# List Resources in node
+sinfo -o "%20N  %10c  %10m  %25f  %10G "
+
 # debugging flags (optional)
 export NCCL_DEBUG=INFO
 export NCCL_DEBUG_SUBSYS=ALL

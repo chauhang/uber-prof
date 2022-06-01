@@ -48,7 +48,7 @@ aws cloudformation create-stack --stack-name VPC-Large-Scale --template-body fil
 ### Create key-pair for hpc cluster
 
 ```bash
-aws ec2 create-key-pair --key-name hpc-key --query KeyMaterial --output text > ~/.ssh/hpc-key
+aws ec2 create-key-pair --key-name hpc-key --query KeyMaterial --region ap-northeast-2 --output text > ~/.ssh/hpc-key
 chmod 600 ~/.ssh/hpc-key
 ```
 
