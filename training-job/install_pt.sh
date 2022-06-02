@@ -17,7 +17,6 @@ conda install -c pytorch magma-cuda111 -y
 cd /lustre || exit
 git clone --recursive https://github.com/pytorch/pytorch
 cd pytorch || exit
-git checkout -b v1.11.0 v1.11.0
 git submodule sync
 git submodule update --init --recursive --jobs 0
 export CMAKE_PREFIX_PATH=${CONDA_PREFIX:-"$(dirname $(which conda))/../"}
