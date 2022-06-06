@@ -20,7 +20,6 @@ source "amazon-ebs" "amznlinux" {
       architecture        = "x86_64"
       root-device-type    = "ebs"
     }
-    subnet_id = var.subnet_id
     most_recent = true
     owners      = ["amazon"]
   }
@@ -28,6 +27,7 @@ source "amazon-ebs" "amznlinux" {
     delay_seconds = 60
     max_attempts  = 120
   }
+  subnet_id = var.subnet_id
   ssh_username = "ec2-user"
 }
 
@@ -42,14 +42,6 @@ build {
       "sudo yum update -y",
       "sudo yum groups mark install \"Development Tools\" -y",
       "sudo yum install git wget kernel-devel-$(uname -r) kernel-headers-$(uname -r) -y",
-      "echo blacklist vga16fb | sudo tee --append /etc/modprobe.d/blacklist.conf",
-      "echo blacklist nouveau | sudo tee --append /etc/modprobe.d/blacklist.conf",
-      "echo blacklist rivafb | sudo tee --append /etc/modprobe.d/blacklist.conf",
-      "echo blacklist nvidiafb | sudo tee --append /etc/modprobe.d/blacklist.conf",
-      "echo blacklist rivatv | sudo tee --append /etc/modprobe.d/blacklist.conf",
-      "echo 'GRUB_CMDLINE_LINUX="rdblacklist=nouveau"' | sudo tee -a /etc/default/grub",
-      "sudo grub2-mkconfig -o /boot/grub2/grub.cfg",
-      "sudo shutdown -r now"
     ]
   }
 
