@@ -1,0 +1,46 @@
+# NHC - nVidia GPU Checks
+#
+# Michael Jennings <mej@lbl.gov>
+# 27 August 2012
+#
+
+NVIDIA_HEALTHMON="${NVIDIA_HEALTHMON:-dcgmi}"
+NVIDIA_HEALTHMON_ARGS="${NVIDIA_HEALTHMON_ARGS:-health -c -j}"
+
+NV_HEALTHMON_LINES=( )
+NV_HEALTHMON_OUTPUT=""
+NV_HEALTHMON_RC=""
+
+export NV_HEALTHMON_LINES NV_HEALTHMON_OUTPUT NV_HEALTHMON_RC
+
+function nhc_nv_gather_data() {
+    local IFS
+
+    NV_HEALTHMON_OUTPUT=$($NVIDIA_HEALTHMON $NVIDIA_HEALTHMON_ARGS)
+    NV_HEALTHMON_RC=$?
+    NV_HEALTHMON_ERROR=$(echo $NV_HEALTHMON_OUTPUT | jq '.body | has("GPU")')
+    IFS=$'\n'
+    NV_HEALTHMON_LINES=( $NV_HEALTHMON_OUTPUT )
+}
+
+# Run the nVidia Tesla Health Monitor utility and verify that all GPUs
+# are functioning properly.
+function check_nv_healthmon() {
+    if [[ -z "$NV_HEALTHMON_RC" ]]; then
+        nhc_nv_gather_data
+    fi
+
+    if [[ $NV_HEALTHMON_RC -eq 127 ]]; then
+        die 1 "$FUNCNAME:  $NVIDIA_HEALTHMON not found or not runnable."
+        return 1
+    elif [[ $NV_HEALTHMON_RC -eq 0 ]]; then
+      if [[ $NV_HEALTHMON_ERROR == "true" ]]; then
+        log "$NV_HEALTHMON_OUTPUT"
+        die 1 "$FUNCNAME:  $NVIDIA_HEALTHMON returned failure code $NV_HEALTHMON_RC"
+        return 1
+      else
+        log "$NV_HEALTHMON_OUTPUT"
+        return 0
+      fi
+    fi
+}

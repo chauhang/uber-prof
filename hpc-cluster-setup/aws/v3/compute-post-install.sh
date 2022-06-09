@@ -28,6 +28,15 @@ tar -xf $EFA_INSTALLER_FN
 cd aws-efa-installer || exit
 sudo ./efa_installer.sh -y
 
+# Install lbnl-nhc
+cd "$INSTALL_ROOT"/packages || exit
+wget https://github.com/mej/nhc/releases/download/1.4.3/lbnl-nhc-1.4.3.tar.gz
+tar -xvzf lbnl-nhc-1.4.3.tar.gz
+cd lbnl-nhc-1.4.3 || exit
+./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/libexec
+make test
+sudo make install
+
 # echo "Installing CUDA"
 cd "$INSTALL_ROOT"/packages || exit
 wget https://developer.download.nvidia.com/compute/cuda/11.3.0/local_installers/cuda_11.3.0_465.19.01_linux.run

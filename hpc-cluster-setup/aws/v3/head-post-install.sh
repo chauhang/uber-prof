@@ -16,6 +16,9 @@ chown -R ec2-user:ec2-user /lustre
 source /lustre/.conda/etc/profile.d/conda.sh
 sudo -u ec2-user /lustre/.conda/bin/conda init bash
 
+# Add Health check program to slurm config
+sudo sed -i '10 a\#\n# HEALTH CHECKS\n#\nHealthCheckProgram=/usr/sbin/nhc\nHealthCheckInterval=10\nHealthCheckNodeState=ANY' /opt/slurm/etc/slurm.conf
+
 # Override run_instance attributes for capacity reservation
 # cat > /opt/slurm/etc/pcluster/run_instances_overrides.json << EOF
 # {
