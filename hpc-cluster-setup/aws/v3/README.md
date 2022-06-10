@@ -97,6 +97,12 @@ Optional: Required for using reserved intances
 }
 ```
 
+#### Using Custom ami for compute nodes
+
+Refer: https://docs.aws.amazon.com/parallelcluster/latest/ug/Image-v3.html
+
+#### [Building custom ami](./custom-ami/Readme.md)
+
 ### Create HPC cluster
 
 ```bash
