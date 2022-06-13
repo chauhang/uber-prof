@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k8s-train
+spec:
+  template:
+    spec:
+      containers:
+      - name: k8s-train
+        image: pytorch/pytorch:1.11.0-cuda11.3-cudnn8-runtime
+        command: ["/bin/sh","-c"]
+        args:
+          - echo starting;
+            pip install -r /data/requirements.txt;
+            export NCCL_DEBUG=INFO;
+            python /data/bert.py --strategy=ddp --num_nodes=1 --gpus=8 --max_epochs=15;
+            echo done;
+        resources:
+          requests:
+            nvidia.com/gpu: 8
+          limits:
+            nvidia.com/gpu: 8
+        volumeMounts:
+          - mountPath: /data
+            name: data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: model-pv-claim
+      restartPolicy: Never
+  backoffLimit: 0
