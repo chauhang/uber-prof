@@ -6,3 +6,5 @@ transformers
 torchdata
 mosaicml
 torchvision
+protobuf<=3.20.1 #Remove once PTL supports latest protobuf - https://github.com/PyTorchLightning/pytorch-lightning/issues/13212
+
