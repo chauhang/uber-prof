@@ -76,7 +76,7 @@ class NewsClassifier(nn.Module):
     def __init__(self, args):
         super(NewsClassifier, self).__init__()
         # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.device = args.rank
+        self.device = int(os.environ["LOCAL_RANK"])
         self.PRE_TRAINED_MODEL_NAME = "bert-base-uncased"
         self.args = vars(args)
         self.EPOCHS = args.max_epochs
@@ -358,17 +358,13 @@ def cleanup():
 def ddp_main(rank, world_size, args):
     setup(rank, world_size)
     args.rank = rank
-    torch.manual_seed(42)
     model = NewsClassifier(args)
     model = model.to(rank)
     model.prepare_data()
     model.setOptimizer(model)
     model.startTraining(model)
-    test_acc, _ = model.eval_model(model, model.test_data_loader)
-    print(test_acc.item())
-    if rank == 0:
-        states = model.state_dict()
-        torch.save(states, "news_classifier_state_dict.pt")
+    # test_acc, _ = model.eval_model(model, model.test_data_loader)
+    # print(test_acc.item())
 
     cleanup()
 
@@ -420,4 +416,3 @@ if __name__ == "__main__":
     WORLD_SIZE = int(os.environ["WORLD_SIZE"])
     rank = int(os.environ["LOCAL_RANK"])
     ddp_main(rank, WORLD_SIZE, args)
-
