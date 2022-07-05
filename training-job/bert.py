@@ -8,7 +8,6 @@ import math
 import os
 from argparse import ArgumentParser
 
-import pandas as pd
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
@@ -17,11 +16,11 @@ from pytorch_lightning.callbacks import (
     ModelCheckpoint,
     LearningRateMonitor,
 )
-from sklearn.datasets import fetch_20newsgroups
 from sklearn.metrics import accuracy_score
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
-from torch.utils.data.dataset import IterDataPipe, random_split
+from torch.utils.data.dataset import random_split
+from torchdata.datapipes.iter import IterDataPipe
 from torchtext.data.functional import to_map_style_dataset
 from torchtext.datasets import AG_NEWS
 from transformers import BertModel, BertTokenizer, AdamW
