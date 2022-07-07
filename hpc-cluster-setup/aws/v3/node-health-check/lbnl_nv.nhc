@@ -1,11 +1,7 @@
 # NHC - nVidia GPU Checks
-#
-# Michael Jennings <mej@lbl.gov>
-# 27 August 2012
-#
 
 NVIDIA_HEALTHMON="${NVIDIA_HEALTHMON:-dcgmi}"
-NVIDIA_HEALTHMON_ARGS="${NVIDIA_HEALTHMON_ARGS:-health -c -j}"
+NVIDIA_HEALTHMON_ARGS="${NVIDIA_HEALTHMON_ARGS:-health -g 0 -c -j}"
 
 NV_HEALTHMON_LINES=( )
 NV_HEALTHMON_OUTPUT=""

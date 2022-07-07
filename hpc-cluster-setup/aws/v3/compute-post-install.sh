@@ -19,6 +19,64 @@ cd lbnl-nhc-1.4.3 || exit
 make test
 sudo make install
 
+# Enable dcgmi health check in nhc config
+# Refer nhc.conf from above downloadfor more details.
+sudo bash -c 'cat >> /etc/nhc/nhc.conf' << EOF
+   * || export NHC_RM=slurm
+   * || export MARK_OFFLINE=0
+   * || export VERBOSE=1
+   * || export NHC_CHECK_ALL=1
+   * || check_fs_mount_rw -f /
+   * || check_ps_service -u root -S sshd
+   * || check_nv_healthmon
+EOF
+
+# Add dcgmi health check script to nhc scripts
+sudo bash -c 'cat > /etc/nhc/scripts/lbnl_nv.nhc' << EOF
+# NHC - nVidia GPU Checks
+
+NVIDIA_HEALTHMON="${NVIDIA_HEALTHMON:-dcgmi}"
+NVIDIA_HEALTHMON_ARGS="${NVIDIA_HEALTHMON_ARGS:-health -g 0 -c -j}"
+
+NV_HEALTHMON_LINES=( )
+NV_HEALTHMON_OUTPUT=""
+NV_HEALTHMON_RC=""
+
+export NV_HEALTHMON_LINES NV_HEALTHMON_OUTPUT NV_HEALTHMON_RC
+
+function nhc_nv_gather_data() {
+    local IFS
+
+    NV_HEALTHMON_OUTPUT=$($NVIDIA_HEALTHMON $NVIDIA_HEALTHMON_ARGS)
+    NV_HEALTHMON_RC=$?
+    NV_HEALTHMON_ERROR=$(echo $NV_HEALTHMON_OUTPUT | jq '.body | has("GPU")')
+    IFS=$'\n'
+    NV_HEALTHMON_LINES=( $NV_HEALTHMON_OUTPUT )
+}
+
+# Run the nVidia Tesla Health Monitor utility and verify that all GPUs
+# are functioning properly.
+function check_nv_healthmon() {
+    if [[ -z "$NV_HEALTHMON_RC" ]]; then
+        nhc_nv_gather_data
+    fi
+
+    if [[ $NV_HEALTHMON_RC -eq 127 ]]; then
+        die 1 "$FUNCNAME:  $NVIDIA_HEALTHMON not found or not runnable."
+        return 1
+    elif [[ $NV_HEALTHMON_RC -eq 0 ]]; then
+      if [[ $NV_HEALTHMON_ERROR == "true" ]]; then
+        log "$NV_HEALTHMON_OUTPUT"
+        die 1 "$FUNCNAME:  $NVIDIA_HEALTHMON returned failure code $NV_HEALTHMON_RC"
+        return 1
+      else
+        log "$NV_HEALTHMON_OUTPUT"
+        return 0
+      fi
+    fi
+}
+EOF
+
 # Set Environment variables
 export INSTALL_ROOT=/home/ec2-user
 export CUDA_HOME=/usr/local/cuda
@@ -69,6 +127,9 @@ sudo yum install -y datacenter-gpu-manager
 
 # Start nv-hostengine
 sudo -u root nv-hostengine -b 0
+
+# Enable background health checks
+dcgmi health -g 0 -s a
 
 #Load AWS Parallelcluster environment variables
 . /etc/parallelcluster/cfnconfig
