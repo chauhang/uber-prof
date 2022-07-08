@@ -44,9 +44,6 @@ export NCCL_SOCKET_IFNAME="en,eth,em,bond"
 # export NCCL_IB_DISABLE=1
 # export NCCL_P2P_DISABLE=1
 
-#conda activate mlflow-9bddce2d28e03e760c930939bf250722cd4d16e8
-conda activate mlflow-df07e1ebdf6ec40b564b24fe1519963ccdc9fc38
-
 ### the command to run
 dcgmi profile --pause
 srun --prolog job_prolog.sh --epilog job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true torchrun  --nnodes 2 --rdzv_id 101 --rdzv_backend c10d --rdzv_endpoint "$master_addr:29500" --nproc_per_node=4 new_classifier_legacy.py --max_epochs 15 --gpus 4 --strategy ddp --num_nodes 2
