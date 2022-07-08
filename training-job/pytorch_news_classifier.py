@@ -3,7 +3,6 @@
 # pylint: disable=E1102
 # pylint: disable=W0223
 import argparse
-import math
 import os
 from collections import defaultdict
 
@@ -11,65 +10,74 @@ import numpy as np
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F
+from datasets import load_dataset
 from torch import nn
-from torch.utils.data import DataLoader
-from torch.utils.data.dataset import random_split
-from torchdata.datapipes.iter import IterDataPipe
-from torchtext.data.functional import to_map_style_dataset
-from torchtext.datasets import AG_NEWS
+from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from transformers import BertModel, BertTokenizer, AdamW
 from transformers import (
     get_linear_schedule_with_warmup,
 )
 
+print("PyTorch version: ", torch.__version__)
+
 class_names = ["World", "Sports", "Business", "Sci/Tech"]
 
 
-class NewsDataset(IterDataPipe):
-    def __init__(self, tokenizer, source_datapipe, max_length, num_samples=None):
-        super(NewsDataset, self).__init__()
-        self.source_datapipe = source_datapipe
-        self.start = 0
+class NewsDataset(Dataset):
+    """Ag News Dataset
+    Args:
+        Dataset
+    """
+
+    def __init__(self, dataset, tokenizer):
+        """Performs initialization of tokenizer.
+        Args:
+             reviews: AG news text
+             targets: labels
+             tokenizer: bert tokenizer
+             max_length: maximum length of the news text
+        """
+        self.dataset = dataset
+        self.max_length = 100
         self.tokenizer = tokenizer
-        self.max_length = max_length
-        if num_samples:
-            self.end = num_samples
-        else:
-            self.end = len(self.source_datapipe)
 
-    def __iter__(self):
-        worker_info = torch.utils.data.get_worker_info()
-        if worker_info is None:
-            iter_start = self.start
-            iter_end = self.end
-        else:
-            per_worker = int(math.ceil((self.end - self.start) / float(worker_info.num_workers)))
-            worker_id = worker_info.id
-            iter_start = self.start + worker_id * per_worker
-            iter_end = min(iter_start + per_worker, self.end)
+    def __len__(self):
+        """
+        Returns:
+             returns the number of datapoints in the dataframe
+        """
+        return len(self.dataset)
 
-        for idx in range(iter_start, iter_end):
-            target, review = self.source_datapipe[idx]
-            # print(target, review)
-            encoding = self.tokenizer.encode_plus(
-                review,
-                add_special_tokens=True,
-                max_length=self.max_length,
-                return_token_type_ids=False,
-                padding="max_length",
-                return_attention_mask=True,
-                return_tensors="pt",
-                truncation=True,
-            )
-            target -= 1
+    def __getitem__(self, item):
+        """Returns the review text and the targets of the specified item.
+        Args:
+             item: Index of sample review
+        Returns:
+             Returns the dictionary of review text,
+             input ids, attention mask, targets
+        """
+        review = str(self.dataset[item]["text"])
+        target = self.dataset[item]["label"]
+        encoding = self.tokenizer.encode_plus(
+            review,
+            add_special_tokens=True,
+            max_length=self.max_length,
+            return_token_type_ids=False,
+            padding="max_length",
+            return_attention_mask=True,
+            return_tensors="pt",
+            truncation=True,
+        )
 
-            yield {
-                "review_text": review,
-                "input_ids": encoding["input_ids"].flatten(),
-                "attention_mask": encoding["attention_mask"].flatten(),
-                "targets": torch.tensor(target, dtype=torch.long),
-            }
+        return {
+            "review_text": review,
+            "input_ids": encoding["input_ids"].flatten(),
+            "attention_mask": encoding["attention_mask"].flatten(),  # pylint: disable=not-callable
+            "targets": torch.tensor(
+                target, dtype=torch.long
+            ),  # pylint: disable=no-member,not-callable
+        }
 
 
 class NewsClassifier(nn.Module):
@@ -82,9 +90,7 @@ class NewsClassifier(nn.Module):
         self.EPOCHS = args.max_epochs
         self.df = None
         self.tokenizer = None
-        self.df_train = None
-        self.df_val = None
-        self.df_test = None
+        self.train_dataset = None
         self.train_data_loader = None
         self.val_data_loader = None
         self.test_data_loader = None
@@ -123,7 +129,7 @@ class NewsClassifier(nn.Module):
         rating = int(rating)
         return rating - 1
 
-    def create_data_loader(self, source, tokenizer, max_len, num_samples):
+    def create_data_loader(self, dataset, tokenizer):
         """
         :param df: DataFrame input
         :param tokenizer: Bert tokenizer
@@ -132,67 +138,45 @@ class NewsClassifier(nn.Module):
 
         :return: output - Corresponding data loader for the given input
         """
-        ds = NewsDataset(
-            source_datapipe=source, tokenizer=tokenizer, max_length=max_len, num_samples=num_samples
+        dataset = NewsDataset(
+            dataset=dataset,
+            tokenizer=tokenizer,
         )
 
         return DataLoader(
-            ds, batch_size=self.BATCH_SIZE, num_workers=self.args.get("num_workers", 3)
+            dataset,
+            batch_size=self.args.get("batch_size", 4),
+            num_workers=self.args.get("num_workers", 1),
         )
 
     def prepare_data(self):
         """
         Creates train, valid and test dataloaders from the csv data
         """
-        train_iter, test_iter = AG_NEWS()
-        self.train_dataset = to_map_style_dataset(train_iter)
-        self.test_dataset = to_map_style_dataset(test_iter)
+        dataset = load_dataset("ag_news")
+        num_train_samples = self.args["num_train_samples"]
 
-        num_train = int(len(self.train_dataset) * 0.95)
-        self.train_dataset, self.val_dataset = random_split(
-            self.train_dataset, [num_train, len(self.train_dataset) - num_train]
+        num_val_samples = int(num_train_samples * 0.1)
+        num_train_samples -= num_val_samples
+        self.train_dataset = dataset["train"].train_test_split(
+            train_size=num_train_samples, test_size=num_val_samples
         )
+        val_data = self.train_dataset["test"]
+        self.train_dataset = self.train_dataset["train"]
 
-        print("Total train samples: {}".format(len(self.train_dataset)))
-        print("Total validation samples: {}".format(len(self.val_dataset)))
-        print("Total test samples: {}".format(len(self.test_dataset)))
-        print(
-            "Number of samples to be used for training: {}".format(
-                self.args.get("train_num_samples", None)
-            )
-        )
-        print(
-            "Number of samples to be used for validation: {}".format(
-                self.args.get("val_num_samples", None)
-            )
-        )
-        print(
-            "Number of samples to be used for test: {}".format(
-                self.args.get("test_num_samples", None)
-            )
-        )
+        test_data = dataset["test"]
+        num_test_samples = self.args["num_test_samples"]
+        remaining = len(test_data) - num_test_samples
+        test_data = dataset["train"].train_test_split(
+            train_size=remaining, test_size=num_test_samples
+        )["test"]
+
         self.tokenizer = BertTokenizer.from_pretrained(self.PRE_TRAINED_MODEL_NAME)
 
-        self.train_data_loader = self.create_data_loader(
-            source=self.train_dataset,
-            tokenizer=self.tokenizer,
-            max_len=self.MAX_LEN,
-            num_samples=self.args.get("train_num_samples", None),
-        )
+        self.train_data_loader = self.create_data_loader(self.train_dataset, self.tokenizer)
 
-        self.val_data_loader = self.create_data_loader(
-            source=self.val_dataset,
-            tokenizer=self.tokenizer,
-            max_len=self.MAX_LEN,
-            num_samples=self.args.get("val_num_samples", None),
-        )
-
-        self.test_data_loader = self.create_data_loader(
-            source=self.test_dataset,
-            tokenizer=self.tokenizer,
-            max_len=self.MAX_LEN,
-            num_samples=self.args.get("test_num_samples", None),
-        )
+        self.val_data_loader = self.create_data_loader(val_data, self.tokenizer)
+        self.test_data_loader = self.create_data_loader(test_data, self.tokenizer)
 
     def setOptimizer(self, model):
         """
@@ -382,7 +366,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--train_num_samples",
+        "--num_train_samples",
         type=int,
         default=2000,
         metavar="N",
@@ -390,15 +374,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--val_num_samples",
-        type=int,
-        default=200,
-        metavar="N",
-        help="Train num samples (default: 200)",
-    )
-
-    parser.add_argument(
-        "--test_num_samples",
+        "--num_test_samples",
         type=int,
         default=200,
         metavar="N",
