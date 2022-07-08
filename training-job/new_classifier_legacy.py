@@ -1,16 +1,13 @@
 from argparse import ArgumentParser
 
-import numpy as np
-import pandas as pd
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
+from datasets import load_dataset
 from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 from torchmetrics import Accuracy
-from torchtext.utils import download_from_url, extract_archive
 from transformers import AdamW, BertModel, BertTokenizer
 
 print("PyTorch version: ", torch.__version__)
@@ -23,7 +20,7 @@ class NewsDataset(Dataset):
         Dataset
     """
 
-    def __init__(self, reviews, targets, tokenizer, max_length):
+    def __init__(self, dataset, tokenizer):
         """Performs initialization of tokenizer.
         Args:
              reviews: AG news text
@@ -31,17 +28,16 @@ class NewsDataset(Dataset):
              tokenizer: bert tokenizer
              max_length: maximum length of the news text
         """
-        self.reviews = reviews
-        self.targets = targets
+        self.dataset = dataset
+        self.max_length = 100
         self.tokenizer = tokenizer
-        self.max_length = max_length
 
     def __len__(self):
         """
         Returns:
              returns the number of datapoints in the dataframe
         """
-        return len(self.reviews)
+        return len(self.dataset)
 
     def __getitem__(self, item):
         """Returns the review text and the targets of the specified item.
@@ -51,9 +47,8 @@ class NewsDataset(Dataset):
              Returns the dictionary of review text,
              input ids, attention mask, targets
         """
-        review = str(self.reviews[item])
-        target = self.targets[item]
-
+        review = str(self.dataset[item]["text"])
+        target = self.dataset[item]["label"]
         encoding = self.tokenizer.encode_plus(
             review,
             add_special_tokens=True,
@@ -69,9 +64,10 @@ class NewsDataset(Dataset):
             "review_text": review,
             "input_ids": encoding["input_ids"].flatten(),
             "attention_mask": encoding["attention_mask"].flatten(),  # pylint: disable=not-callable
-            "targets": torch.tensor(target, dtype=torch.long),  # pylint: disable=no-member,not-callable
+            "targets": torch.tensor(
+                target, dtype=torch.long
+            ),  # pylint: disable=no-member,not-callable
         }
-
 
 
 class BertDataModule(pl.LightningDataModule):  # pylint: disable=too-many-instance-attributes
@@ -81,21 +77,18 @@ class BertDataModule(pl.LightningDataModule):  # pylint: disable=too-many-instan
         """Initialization of inherited lightning data module."""
         super(BertDataModule, self).__init__()  # pylint: disable=super-with-arguments
         self.pre_trained_model_name = "bert-base-uncased"
-        self.df_train = None
-        self.df_val = None
-        self.df_test = None
-        self.train_data_loader = None
-        self.val_data_loader = None
-        self.test_data_loader = None
+        self.train_data = None
+        self.val_data = None
+        self.test_data = None
         self.max_length = 100
         self.encoding = None
         self.tokenizer = None
         self.args = kwargs
+        self.dataset = None
 
     def prepare_data(self):
         """Implementation of abstract class."""
-        dataset_tar = download_from_url(self.args["dataset_url"], root="./")
-        extract_archive(dataset_tar)
+        self.dataset = load_dataset("ag_news")
 
     @staticmethod
     def process_label(rating):
@@ -109,39 +102,27 @@ class BertDataModule(pl.LightningDataModule):  # pylint: disable=too-many-instan
         Args:
             stage: Stage - training or testing
         """
+        self.tokenizer = BertTokenizer.from_pretrained(self.pre_trained_model_name)
 
-        num_samples = self.args.get("num_samples", 1000)
+        if stage == "fit":
+            num_train_samples = self.args["num_train_samples"]
 
-        dataframe = pd.read_csv("ag_news_csv/train.csv")
+            num_val_samples = int(num_train_samples * 0.1)
+            num_train_samples -= num_val_samples
+            self.train_data = self.dataset["train"].train_test_split(
+                train_size=num_train_samples, test_size=num_val_samples
+            )
+            self.val_data = self.train_data["test"]
+            self.train_data = self.train_data["train"]
+        else:
+            self.test_data = self.dataset["test"]
+            num_test_samples = self.args["num_test_samples"]
+            remaining = len(self.test_data) - num_test_samples
+            self.test_data = self.dataset["train"].train_test_split(
+                train_size=remaining, test_size=num_test_samples
+            )["test"]
 
-        dataframe.columns = ["label", "title", "description"]
-        dataframe.sample(frac=1)
-        dataframe = dataframe.iloc[:num_samples]
-
-        dataframe["label"] = dataframe.label.apply(self.process_label)
-
-        self.tokenizer = BertTokenizer.from_pretrained(
-            self.pre_trained_model_name
-        )
-
-        random_seed = 42
-        np.random.seed(random_seed)
-        torch.manual_seed(random_seed)
-
-        self.df_train, self.df_test = train_test_split(
-            dataframe,
-            test_size=0.2,
-            random_state=random_seed,
-            stratify=dataframe["label"],
-        )
-        self.df_val, self.df_test = train_test_split(
-            self.df_test,
-            test_size=0.2,
-            random_state=random_seed,
-            stratify=self.df_test["label"],
-        )
-
-    def create_data_loader(self, dataframe, tokenizer, max_len, batch_size):  # pylint: disable=unused-argument
+    def create_data_loader(self, dataset, tokenizer, num_samples):
         """Generic data loader function.
         Args:
          dataframe: Input dataframe
@@ -152,10 +133,8 @@ class BertDataModule(pl.LightningDataModule):  # pylint: disable=too-many-instan
              Returns the constructed dataloader
         """
         dataset = NewsDataset(
-            reviews=dataframe.description.to_numpy(),
-            targets=dataframe.label.to_numpy(),
+            dataset=dataset,
             tokenizer=tokenizer,
-            max_length=max_len,
         )
 
         return DataLoader(
@@ -169,48 +148,36 @@ class BertDataModule(pl.LightningDataModule):  # pylint: disable=too-many-instan
         Returns:
              output - Train data loader for the given input
         """
-        self.train_data_loader = self.create_data_loader(
-            self.df_train,
-            self.tokenizer,
-            self.max_length,
-            self.args.get("batch_size", 4),
+        return self.create_data_loader(
+            self.train_data, self.tokenizer, num_samples=len(self.train_data)
         )
-        return self.train_data_loader
 
     def val_dataloader(self):
         """Validation data loader.
         Returns:
             output - Validation data loader for the given input
         """
-        self.val_data_loader = self.create_data_loader(
-            self.df_val,
-            self.tokenizer,
-            self.max_length,
-            self.args.get("batch_size", 4),
+        return self.create_data_loader(
+            self.val_data, self.tokenizer, num_samples=len(self.val_data)
         )
-        return self.val_data_loader
 
     def test_dataloader(self):
         """Test data loader.
         Return:
              output - Test data loader for the given input
         """
-        self.test_data_loader = self.create_data_loader(
-            self.df_test,
-            self.tokenizer,
-            self.max_length,
-            self.args.get("batch_size", 4),
-        )
-        return self.test_data_loader
+        return self.create_data_loader(self.test_data, self.tokenizer, len(self.test_data))
 
 
-class BertNewsClassifier(pl.LightningModule):  #pylint: disable=too-many-ancestors,too-many-instance-attributes
+class BertNewsClassifier(
+    pl.LightningModule
+):  # pylint: disable=too-many-ancestors,too-many-instance-attributes
     """Bert Model Class."""
 
     def __init__(self, **kwargs):
         """Initializes the network, optimizer and scheduler."""
-        super(BertNewsClassifier, self).__init__()  #pylint: disable=super-with-arguments
-        self.pre_trained_model_name = "bert-base-uncased"  #pylint: disable=invalid-name
+        super(BertNewsClassifier, self).__init__()  # pylint: disable=super-with-arguments
+        self.pre_trained_model_name = "bert-base-uncased"  # pylint: disable=invalid-name
         self.bert_model = BertModel.from_pretrained(self.pre_trained_model_name)
         for param in self.bert_model.parameters():
             param.requires_grad = False
@@ -233,7 +200,7 @@ class BertNewsClassifier(pl.LightningModule):  #pylint: disable=too-many-ancesto
         self.preds = []
         self.target = []
 
-    def compute_bert_outputs(  #pylint: disable=no-self-use
+    def compute_bert_outputs(  # pylint: disable=no-self-use
         self, model_bert, embedding_input, attention_mask=None, head_mask=None
     ):
         """Computes Bert Outputs.
@@ -246,7 +213,7 @@ class BertNewsClassifier(pl.LightningModule):  #pylint: disable=too-many-ancesto
             output : the bert output
         """
         if attention_mask is None:
-            attention_mask = torch.ones(  #pylint: disable=no-member
+            attention_mask = torch.ones(  # pylint: disable=no-member
                 embedding_input.shape[0], embedding_input.shape[1]
             ).to(embedding_input)
 
@@ -259,12 +226,8 @@ class BertNewsClassifier(pl.LightningModule):  #pylint: disable=too-many-ancesto
 
         if head_mask is not None:
             if head_mask.dim() == 1:
-                head_mask = head_mask.unsqueeze(0).unsqueeze(0).unsqueeze(
-                    -1
-                ).unsqueeze(-1)
-                head_mask = head_mask.expand(
-                    model_bert.config.num_hidden_layers, -1, -1, -1, -1
-                )
+                head_mask = head_mask.unsqueeze(0).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+                head_mask = head_mask.expand(model_bert.config.num_hidden_layers, -1, -1, -1, -1)
             elif head_mask.dim() == 2:
                 head_mask = (
                     head_mask.unsqueeze(1).unsqueeze(-1).unsqueeze(-1)
@@ -287,7 +250,7 @@ class BertNewsClassifier(pl.LightningModule):  #pylint: disable=too-many-ancesto
         return outputs
 
     def forward(self, input_ids, attention_mask=None):
-        """ Forward function.
+        """Forward function.
         Args:
             input_ids: Input data
             attention_maks: Attention mask value
@@ -295,9 +258,7 @@ class BertNewsClassifier(pl.LightningModule):  #pylint: disable=too-many-ancesto
              output - Type of news for the given news snippet
         """
         embedding_input = self.bert_model.embeddings(input_ids)
-        outputs = self.compute_bert_outputs(
-            self.bert_model, embedding_input, attention_mask
-        )
+        outputs = self.compute_bert_outputs(self.bert_model, embedding_input, attention_mask)
         pooled_output = outputs[1]
         output = torch.tanh(self.fc1(pooled_output))
         output = self.drop(output)
@@ -317,7 +278,7 @@ class BertNewsClassifier(pl.LightningModule):  #pylint: disable=too-many-ancesto
         attention_mask = train_batch["attention_mask"].to(self.device)
         targets = train_batch["targets"].to(self.device)
         output = self.forward(input_ids, attention_mask)
-        _, y_hat = torch.max(output, dim=1)  #pylint: disable=no-member
+        _, y_hat = torch.max(output, dim=1)  # pylint: disable=no-member
         loss = F.cross_entropy(output, targets)
         self.train_acc(y_hat, targets)
         self.log("train_acc", self.train_acc.compute())
@@ -336,13 +297,13 @@ class BertNewsClassifier(pl.LightningModule):  #pylint: disable=too-many-ancesto
         attention_mask = test_batch["attention_mask"].to(self.device)
         targets = test_batch["targets"].to(self.device)
         output = self.forward(input_ids, attention_mask)
-        _, y_hat = torch.max(output, dim=1)  #pylint: disable=no-member
+        _, y_hat = torch.max(output, dim=1)  # pylint: disable=no-member
         test_acc = accuracy_score(y_hat.cpu(), targets.cpu())
         self.test_acc(y_hat, targets)
         self.preds += y_hat.tolist()
         self.target += targets.tolist()
         self.log("test_acc", self.test_acc.compute())
-        return {"test_acc": torch.tensor(test_acc)}  #pylint: disable=no-member
+        return {"test_acc": torch.tensor(test_acc)}  # pylint: disable=no-member
 
     def validation_step(self, val_batch, batch_idx):
         """Performs validation of data in batches.
@@ -357,7 +318,7 @@ class BertNewsClassifier(pl.LightningModule):  #pylint: disable=too-many-ancesto
         attention_mask = val_batch["attention_mask"].to(self.device)
         targets = val_batch["targets"].to(self.device)
         output = self.forward(input_ids, attention_mask)
-        _, y_hat = torch.max(output, dim=1)  #pylint: disable=no-member
+        _, y_hat = torch.max(output, dim=1)  # pylint: disable=no-member
         loss = F.cross_entropy(output, targets)
         self.val_acc(y_hat, targets)
         self.log("val_acc", self.val_acc.compute())
@@ -371,48 +332,34 @@ class BertNewsClassifier(pl.LightningModule):  #pylint: disable=too-many-ancesto
         """
         self.optimizer = AdamW(self.parameters(), lr=self.args.get("lr", 0.001))
         self.scheduler = {
-            "scheduler":
-                torch.optim.lr_scheduler.ReduceLROnPlateau(
-                    self.optimizer,
-                    mode="min",
-                    factor=0.2,
-                    patience=2,
-                    min_lr=1e-6,
-                    verbose=True,
-                ),
-            "monitor":
-                "val_loss",
+            "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer,
+                mode="min",
+                factor=0.2,
+                patience=2,
+                min_lr=1e-6,
+                verbose=True,
+            ),
+            "monitor": "val_loss",
         }
         return [self.optimizer], [self.scheduler]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = ArgumentParser(description="Bert-News Classifier Example")
     parser.add_argument(
-        "--num_samples",
+        "--num_train_samples",
         type=int,
-        default=1000,
+        default=2000,
         metavar="N",
         help="Samples for training and evaluation steps (default: 15000) Maximum:100000",
     )
     parser.add_argument(
-        "--vocab_file",
-        default="https://s3.amazonaws.com/models.huggingface.co/bert/bert-base-uncased-vocab.txt",
-        help="Custom vocab file",
-    )
-
-    parser.add_argument(
-        "--dataset_url",
-        default=
-        "https://kubeflow-dataset.s3.us-east-2.amazonaws.com/ag_news_csv.tar.gz", #pylint: disable=line-too-long
-        type=str,
-        help="URL to download AG News dataset",
-    )
-
-    parser.add_argument(
-        "--dataset_download_path",
-        default="output",
-        help="Path to download the dataset",
+        "--num_test_samples",
+        type=int,
+        default=200,
+        metavar="N",
+        help="Samples for training and evaluation steps (default: 15000) Maximum:100000",
     )
 
     parser = pl.Trainer.add_argparse_args(parent_parser=parser)
@@ -425,9 +372,6 @@ if __name__ == '__main__':
 
     model = BertNewsClassifier(**dict_args)
 
-    trainer = pl.Trainer.from_argparse_args(
-        args
-    )
+    trainer = pl.Trainer.from_argparse_args(args)
     trainer.fit(model, dm)
-    trainer.test(datamodule=dm)
-
+    trainer.test(model, dm)
