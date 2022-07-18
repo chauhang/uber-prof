@@ -1,7 +1,7 @@
 apiVersion: "kubeflow.org/v1"
 kind: "PyTorchJob"
 metadata:
-  name: "torch_elastic_t5_benchmark"
+  name: "torch-elastic-t5-benchmark"
 spec:
   elasticPolicy:
     rdzvBackend: c10d
@@ -22,12 +22,12 @@ spec:
           containers:
             - name: pytorch
               image: jagadeeshj/pytorch-dist-bert:pt-nightly
-              imagePullPolicy: IfNotPresent
+              imagePullPolicy: Always
               command: ["/bin/bash", "-c"]
               args:
                 - echo starting;
-                  cd /data;
-                  torchrun --rdzv_backend $PET_RDZV_BACKEND --rdzv_endpoint $PET_RDZV_ENDPOINT --nnodes $PET_NNODES  --nproc_per_node $PET_N_PROC_PER_NODE main_benchmark.py
+                  cd /data/t5_11;
+                  torchrun --rdzv_backend $PET_RDZV_BACKEND --rdzv_endpoint $PET_RDZV_ENDPOINT --nnodes $PET_NNODES --nproc_per_node $PET_N_PROC_PER_NODE main_benchmark.py;
               env:
                 - name: LOGLEVEL
                   value: INFO
@@ -37,17 +37,17 @@ spec:
                   value: "1"
                 - name: NCCL_NET
                   value: Socket
-                - name: CUDA_LAUNCH_BLOCKING
-                  value: "1"
+                # - name: CUDA_LAUNCH_BLOCKING
+                #   value: "1"
                 # - name: FI_PROVIDER
                 #   value: efa
               resources:
                 limits:
                   # hugepages-2Mi: 5120Mi
                   # vpc.amazonaws.com/efa: 1
-                  memory: 8000Mi
+                  memory: 16000Mi
                   nvidia.com/gpu: 4
-                  cpu: 24
+                  cpu: 31000m
               volumeMounts:
                 - name: persistent-storage
                   mountPath: /data

@@ -1,5 +1,6 @@
-# FROM pytorch/pytorch:1.11.0-cuda11.3-cudnn8-runtime
-FROM jagadeeshj/aws-efa-nccl:v1
+FROM nvcr.io/nvidia/cuda:11.3.0-cudnn8-devel-ubuntu20.04
+# For EFA Enabled docker image build base image form packer script
+# FROM jagadeeshj/aws-efa-nccl:v1
 
 
 RUN apt-get install -y python3-venv
@@ -11,6 +12,8 @@ RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 RUN pip install -U pip
+
+# RUN pip install torch==1.12.0 torchtext torchdata torchvision torchaudio
 RUN pip install torch torchvision torchaudio torchtext --extra-index-url https://download.pytorch.org/whl/cu113
 
 COPY requirements.txt .
