@@ -6,7 +6,7 @@
 
 Update variable.auto.pkrvars.hcl file with required changes and build image.
 
-validata script
+validate script
 
 ```bash
 packer validate .
@@ -15,7 +15,6 @@ packer validate .
 Build image
 
 ```bash
-```
 packer build .
 ```
 
@@ -56,4 +55,4 @@ FSDP example
 kubectl apply -f t5_benchmark_job.yaml
 ```
 
-Note: Make sure the change the path and command yaml file.
+Note: Make sure the change the image, path and command properties in yaml file.
