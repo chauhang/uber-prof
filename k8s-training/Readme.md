@@ -1,5 +1,53 @@
 # Training PyTorch model with kubernetes pytorch training operator
 
+## Create Kubernetes cluster with eksctl
+
+
+```yaml
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: "training-operator"
+  region: "us-west-2"
+
+vpc:
+  id: "vpc-xxxxxxxxxxxxxxxxx"
+  subnets:
+    private:
+      us-west-2a:
+          id: "subnet-xxxxxxxxxxxxxxxxx"
+      us-west-2c:
+          id: "subnet-xxxxxxxxxxxxxxxxx"
+    public:
+      us-west-2a:
+          id: "subnet-xxxxxxxxxxxxxxxxx"
+      us-west-2c:
+          id: "subnet-xxxxxxxxxxxxxxxxx"
+
+nodeGroups:
+  - name: ng-1
+    minSize: 1
+    maxSize: 4
+    desiredCapacity: 2
+    instancesDistribution:
+      instanceTypes: ["p3.8xlarge"] # At least one instance type should be specified
+      onDemandBaseCapacity: 0
+      onDemandPercentageAboveBaseCapacity: 50
+      spotInstancePools: 5
+```
+
+For EFA supported EKS cluster refer: https://github.com/aws-samples/aws-efa-eks
+
+```bash
+eksctl create cluster -f cluster.yaml
+```
+
+## Install PyTorch Training Operator
+
+```bash
+kubectl apply -f kubectl apply -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=v1.3.0"
+```
+
 ## Build image
 
 ## Build base image from packer script
