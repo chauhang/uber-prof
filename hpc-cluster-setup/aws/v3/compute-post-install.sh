@@ -61,6 +61,78 @@ sudo yum install -y datacenter-gpu-manager
 # Start nv-hostengine
 sudo -u root nv-hostengine -b 0
 
+# Enable background health checks
+dcgmi health -g 0 -s a
+
+# Install lbnl-nhc
+cd "$INSTALL_ROOT"/packages || exit
+wget https://github.com/mej/nhc/releases/download/1.4.3/lbnl-nhc-1.4.3.tar.gz
+tar -xvzf lbnl-nhc-1.4.3.tar.gz
+cd lbnl-nhc-1.4.3 || exit
+./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/libexec
+make test
+sudo make install
+
+# Add dcgmi health check script to nhc scripts
+sudo bash -c 'cat > /etc/nhc/scripts/lbnl_nv.nhc' << EOF
+# NHC - nVidia GPU Checks
+
+NVIDIA_HEALTHMON="\${NVIDIA_HEALTHMON:-dcgmi}"
+NVIDIA_HEALTHMON_ARGS="\${NVIDIA_HEALTHMON_ARGS:-health -g 0 -c -j}"
+
+NV_HEALTHMON_LINES=( )
+NV_HEALTHMON_OUTPUT=""
+NV_HEALTHMON_RC=""
+
+export NV_HEALTHMON_LINES NV_HEALTHMON_OUTPUT NV_HEALTHMON_RC
+
+function nhc_nv_gather_data() {
+    local IFS
+
+    NV_HEALTHMON_OUTPUT=\$(\$NVIDIA_HEALTHMON \$NVIDIA_HEALTHMON_ARGS)
+    NV_HEALTHMON_RC=\$?
+    NV_HEALTHMON_ERROR=\$(echo \$NV_HEALTHMON_OUTPUT | jq '.body | has("GPU")')
+    IFS=\$'\n'
+    NV_HEALTHMON_LINES=( \$NV_HEALTHMON_OUTPUT )
+}
+
+# Run the nVidia Tesla Health Monitor utility and verify that all GPUs
+# are functioning properly.
+function check_nv_healthmon() {
+    if [[ -z "\$NV_HEALTHMON_RC" ]]; then
+        nhc_nv_gather_data
+    fi
+
+    if [[ \$NV_HEALTHMON_RC -eq 127 ]]; then
+        die 1 "\$FUNCNAME:  \$NVIDIA_HEALTHMON not found or not runnable."
+        return 1
+    elif [[ \$NV_HEALTHMON_RC -eq 0 ]]; then
+      if [[ \$NV_HEALTHMON_ERROR == "true" ]]; then
+        die 1 "\$FUNCNAME:  \$NVIDIA_HEALTHMON returned failure code \$NV_HEALTHMON_RC"
+        return 1
+      else
+        return 0
+      fi
+    fi
+}
+EOF
+
+# Add Slurm RM to nhc config
+sudo bash -c 'cat > /etc/sysconfig/nhc' << EOF
+   * || export PATH="\$PATH:/opt/slurm/bin:/opt/slurm/sbin"
+   * || export NHC_RM=slurm
+   * || export VERBOSE=1
+   * || HOSTNAME="\$HOSTNAME_S"
+EOF
+
+# Enable dcgmi health check in nhc config
+# Refer nhc.conf for more detail.
+sudo bash -c 'cat >> /etc/nhc/nhc.conf' << EOF
+   * || export NHC_CHECK_ALL=1
+   * || check_nv_healthmon
+EOF
+
+
 #Load AWS Parallelcluster environment variables
 . /etc/parallelcluster/cfnconfig
 

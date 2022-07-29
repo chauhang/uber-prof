@@ -12,13 +12,16 @@
 ### change WORLD_SIZE as gpus/node * num_nodes
 export MASTER_PORT=12356
 echo "MASTER_PORT="$MASTER_PORT
-export WORLD_SIZE=32
+export WORLD_SIZE=16
 ### get the first node name as master address - customized for vgg slurm
 ### e.g. master(gnodee[2-5],gnoded1) == gnodee2
 echo "NODELIST="${SLURM_NODELIST}
 master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
 export MASTER_ADDR=$master_addr
 echo "MASTER_ADDR="$MASTER_ADDR
+
+# List Resources in node
+sinfo -o "%20N  %10c  %10m  %25f  %10G "
 
 # debugging flags (optional)
 export NCCL_DEBUG=INFO
@@ -33,6 +36,10 @@ export LD_LIBRARY_PATH=/usr/local/lib/:$LD_LIBRARY_PATH
 # on your cluster you might need these:
 # set the network interface
 export NCCL_SOCKET_IFNAME="en,eth,em,bond"
+
+
+# Uncomment for FSDP
+# ENABLE_NCCL_BASE_COLLECTIVES=0
 
 # uncommet for using IP sockets
 # export NCCL_IB_DISABLE=1

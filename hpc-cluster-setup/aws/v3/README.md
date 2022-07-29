@@ -48,7 +48,7 @@ aws cloudformation create-stack --stack-name VPC-Large-Scale --template-body fil
 ### Create key-pair for hpc cluster
 
 ```bash
-aws ec2 create-key-pair --key-name hpc-key --query KeyMaterial --output text > ~/.ssh/hpc-key
+aws ec2 create-key-pair --key-name hpc-key --query KeyMaterial --region ap-northeast-2 --output text > ~/.ssh/hpc-key
 chmod 600 ~/.ssh/hpc-key
 ```
 
@@ -77,10 +77,24 @@ Upload the built package from `_out` folder to a s3 bucket and update the url in
 
 Note: Add Subnet with Public IP for headnode and Private IP for compute nodes.
 
-Create capacity reservation policy for Instance reservation
+### Create capacity reservation policy for Instance reservation
+
 Optional: Required for using reserved intances
 
-```json
+* Create a resource group to group capacity
+
+```bash
+aws resource-groups create-group --name EC2CRGroup --configuration '{"Type":"AWS::EC2::CapacityReservationPool"}' '{"Type":"AWS::ResourceGroups::Generic", "Parameters": [{"Name": "allowed-resource-types", "Values": ["AWS::EC2::CapacityReservation"]}]}'
+```
+
+* Add capacity reservations to the resource group, every time you create an new ODCR please add it to the Group Reservation. Please ensure to replace `PLACEHOLDER_ACCOUNT_ID` with your account ID, `PLACEHOLDER_CAPACITY_RESERVATION` with the ID of your capacity reservation and `PLACEHOLDER_AWS_REGION` with your AWS region ID (`us-east-1` for example).
+
+```bash
+aws resource-groups group-resources --region PLACEHOLDER_AWS_REGION --group EC2CRGroup --resource-arns arn:aws:ec2:PLACEHOLDER_AWS_REGION:PLACEHOLDER_ACCOUNT_ID:capacity-reservation/PLACEHOLDER_CAPACITY_RESERVATION
+```
+
+```bash
+cat > policy.json << EOF
 {
     "Version": "2012-10-17",
     "Statement": [
@@ -89,17 +103,24 @@ Optional: Required for using reserved intances
             "Effect": "Allow",
             "Action": "ec2:RunInstances",
             "Resource": [
-                "arn:aws:ec2:<region>:<account-id>:capacity-reservation/*",
-                "arn:aws:resource-groups:<region>:<account-id>:group/*"
+                "arn:aws:ec2:PLACEHOLDER_AWS_REGION:PLACEHOLDER_ACCOUNT_ID:capacity-reservation/*",
+                "arn:aws:resource-groups:PLACEHOLDER_AWS_REGION:PLACEHOLDER_ACCOUNT_ID:group/*"
             ]
         }
     ]
 }
+EOF
+```
+
+* Create the IAM policy on your AWS account using the `json` file you created.
+
+```bash
+aws iam create-policy --policy-name RunInstancesInCapacityReservation --policy-document file://policy.json
 ```
 
 #### Using Custom ami for compute nodes
 
-Refer: https://docs.aws.amazon.com/parallelcluster/latest/ug/Image-v3.html
+Refer: <https://docs.aws.amazon.com/parallelcluster/latest/ug/Image-v3.html>
 
 #### [Building custom ami](./custom-ami/Readme.md)
 
@@ -170,8 +191,8 @@ docker-compose --env-file /etc/parallelcluster/cfnconfig -f ~/aws-parallelcluste
 
 ### Dasboards
 
-Grafana dashboard: https://ec2-<ip>.<region>.compute.amazonaws.com/grafana/login
-Prometheus dashboard: https://ec2-<ip>.<region>.compute.amazonaws.com/prometheus/graph
+Grafana dashboard: <https://ec2>-<ip>.<region>.compute.amazonaws.com/grafana/login
+Prometheus dashboard: <https://ec2>-<ip>.<region>.compute.amazonaws.com/prometheus/graph
 
 Note: Add inboud rule for port 80 and 443 to headnode security group for grafana and prometheus access.
 

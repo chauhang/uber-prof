@@ -1,21 +1,48 @@
 # Run a training slurm job
 
-## Run job
+## Running slurm job
+
+### Clone uber-prof repo
+
+#### SSH into the headnode and run
 
 ```bash
-# Add executable permission to files
+cd /lustre
+git clone https://github.com/chauhang/uber-prof
+cd uber-prof
+```
+
+### Add executable permission to files
+
+```bash
 chmod +x job_prolog.sh
 chmod +x job_epilog.sh
 ```
 
 ## Install required packages
 
-Navigate to training-job folder and install packages in headnode
+**Note: By default the post-install script install pytorch release version for cuda113. For installing nightly build or for building PyTorch from source, uninstalling existing Pytorch and install the required version using below commands**
+
+### Uninstall PyTorch
 
 ```bash
-chmod +x install_PT1.10_from_src.sh
-./install_PT1.10_from_src.sh
+pip uninstall -y torch torchaudio
 ```
+
+### For installing nightly build
+
+```bash
+pip3 install --pre torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/nightly/cu113
+```
+
+### For installing pytorch from source run the following command
+
+```bash
+chmod +x install_pt.sh
+sbatch install_pt.slurm
+```
+
+### Install other required packages
 
 ```bash
 pip3 install --no-cache-dir -r requirements.txt
