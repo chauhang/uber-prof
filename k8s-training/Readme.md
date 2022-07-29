@@ -52,6 +52,10 @@ kubectl apply -f kubectl apply -k "github.com/kubeflow/training-operator/manifes
 
 ## Build base image from packer script
 
+```bash
+cd packer_script
+```
+
 Update variable.auto.pkrvars.hcl file with required changes and build image.
 
 validate script
