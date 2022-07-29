@@ -108,3 +108,98 @@ kubectl apply -f t5_benchmark_job.yaml
 ```
 
 Note: Make sure the change the image, path and command properties in yaml file.
+
+## Monitoring GPUs in Kubernetes with DCGM
+
+### Install Prometheus and Grafana
+
+#### Add prometheus to registry
+
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+```
+
+
+```bash
+helm inspect values prometheus-community/kube-prometheus-stack > /tmp/kube-prometheus-stack.values
+```
+
+Modify the `prometheusSpec.serviceMonitorSelectorNilUsesHelmValues` settings to `false` below:
+
+```bash
+serviceMonitorSelectorNilUsesHelmValues: false
+```
+
+Add the following `configMap` to the section on `additionalScrapeConfigs` in the Helm chart:
+
+```bash
+additionalScrapeConfigs:
+- job_name: gpu-metrics
+  scrape_interval: 1s
+  metrics_path: /metrics
+  scheme: http
+  kubernetes_sd_configs:
+  - role: endpoints
+    namespaces:
+      names:
+      - gpu-operator-resources
+  relabel_configs:
+  - source_labels: [__meta_kubernetes_pod_node_name]
+    action: replace
+    target_label: kubernetes_node
+```
+
+#### Install the Helm chart
+
+```bash
+helm install prometheus-community/kube-prometheus-stack \
+   --create-namespace --namespace prometheus \
+   --generate-name \
+   --values /tmp/kube-prometheus-stack.values
+```
+
+### Install DCGM Exporter
+
+```bash
+helm repo add gpu-helm-charts https://nvidia.github.io/dcgm-exporter/helm-charts
+helm repo update
+helm install --generate-name gpu-helm-charts/dcgm-exporter
+```
+
+Verify Pods and services
+
+```bash
+kubectl get pods -A
+kubectl get svc -A
+```
+
+### Open Prometheus and Grafana
+
+#### Port forward Prometheus svc
+
+```bash
+kubectl port-forward svc/kube-prometheus-stack-1635-prometheus -n prometheus 9090:9090
+```
+
+Access Prometheus Url: [http://localhost:9090/](http://localhost:9090/)
+
+Verify metric by typing `DCGM_FI_DEV_GPU_UTIL` in eventbar.
+
+#### Port forward Grafana svc
+
+```bash
+kubectl port-forward svc/kube-prometheus-stack-1635755904-grafana -n prometheus 3000:80
+```
+
+Access Grafana Url: [http://localhost:3000/](http://localhost:3000/)
+
+```bash
+Username: admin
+Password: prom-operator
+```
+
+### DCGM Dashboard in Grafana
+
+Choose import from Grafana dashboard and import the NVIDIA dashboard from `https://grafana.com/grafana/dashboards/12239 `and choose `Prometheus` as the data source in the drop down:
+
