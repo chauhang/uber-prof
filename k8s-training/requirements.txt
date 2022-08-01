@@ -1,0 +1,7 @@
+pandas
+sklearn
+pytorch_lightning
+transformers
+mosaicml
+datasets
+tqdm
