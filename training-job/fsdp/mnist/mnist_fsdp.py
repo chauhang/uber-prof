@@ -1,22 +1,17 @@
 # Based on: https://github.com/pytorch/examples/blob/master/mnist/main.py
 import argparse
-import functools
 import os
 
 import torch
 import torch.distributed as dist
-import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-# from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
     FullyShardedDataParallel as FSDP,
 )
-from torch.distributed.fsdp.wrap import (
-    default_auto_wrap_policy,
-)
+
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data.distributed import DistributedSampler
 from torchvision import datasets, transforms
@@ -122,7 +117,6 @@ def ddp_main(rank, world_size, args):
 
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
-    my_auto_wrap_policy = functools.partial(default_auto_wrap_policy, min_num_params=20000)
     torch.cuda.set_device(rank)
 
     init_start_event = torch.cuda.Event(enable_timing=True)
