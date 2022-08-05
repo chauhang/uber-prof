@@ -28,50 +28,50 @@ FSDP related parameters
 
 ## Running the code
 
-For training the model in cpu
+For training the model in GPU
 
 ```
-python run_image_classification.py \
->     --dataset_name cifar10 \
->     --output_dir ./cifar10_outputs/ \
->     --remove_unused_columns False \
->     --do_train \
->     --do_eval \
->     --learning_rate 2e-5 \
->     --num_train_epochs 5 \
->     --per_device_train_batch_size 8 \
->     --per_device_eval_batch_size 8 \
->     --logging_strategy steps \
->     --logging_steps 10 \
->     --evaluation_strategy epoch \
->     --save_strategy epoch \
->     --load_best_model_at_end True \
->     --save_total_limit 3 \
->     --seed 1337
+python image_classification.py \
+      --dataset_name beans \
+      --output_dir ./beans_outputs/ \
+      --remove_unused_columns False \
+      --do_train \
+      --do_eval \
+      --learning_rate 2e-5 \
+      --num_train_epochs 5 \
+      --per_device_train_batch_size 8 \
+      --per_device_eval_batch_size 8 \
+      --logging_strategy steps \
+      --logging_steps 10 \
+      --evaluation_strategy epoch \
+      --save_strategy epoch \
+      --load_best_model_at_end True \
+      --save_total_limit 3 \
+      --seed 1337
 ```
 
 To train the model in Distributed mode using fsdp
 
 ```
-torchrun --nproc_per_node=4 run_image_classification.py \
->     --dataset_name cifar10 \
->     --output_dir ./cifar10_outputs/ \
->     --remove_unused_columns False \
->     --do_train \
->     --do_eval \
->     --learning_rate 2e-5 \
->     --num_train_epochs 5 \
->     --per_device_train_batch_size 8 \
->     --per_device_eval_batch_size 8 \
->     --logging_strategy steps \
->     --logging_steps 10 \
->     --evaluation_strategy epoch \
->     --save_strategy epoch \
->     --load_best_model_at_end True \
->     --save_total_limit 3 \
->     --seed 1337 \
->     --fsdp "full_shard auto_wrap" \
->     --fsdp_min_num_params 20000
+torchrun --nproc_per_node=4 image_classification.py \
+      --dataset_name beans \
+      --output_dir ./beans_outputs/ \
+      --remove_unused_columns False \
+      --do_train \
+      --do_eval \
+      --learning_rate 2e-5 \
+      --num_train_epochs 5 \
+      --per_device_train_batch_size 8 \
+      --per_device_eval_batch_size 8 \
+      --logging_strategy steps \
+      --logging_steps 10 \
+      --evaluation_strategy epoch \
+      --save_strategy epoch \
+      --load_best_model_at_end True \
+      --save_total_limit 3 \
+      --seed 1337 \
+      --fsdp "full_shard auto_wrap" \
+      --fsdp_min_num_params 20000
 ```
 
 Note: To train the model using fsdp , `transformers` package should be compiled from source
