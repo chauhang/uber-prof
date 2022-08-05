@@ -97,15 +97,15 @@ At the end of the traning following output files are generated in the output fol
 ```
 {
     "epoch": 5.0,
-    "eval_accuracy": 0.994,
-    "eval_loss": 0.03872646391391754,
-    "eval_runtime": 18.2409,
-    "eval_samples_per_second": 411.164,
-    "eval_steps_per_second": 12.883,
-    "train_loss": 0.3321523506180338,
-    "train_runtime": 1525.2978,
-    "train_samples_per_second": 139.317,
-    "train_steps_per_second": 4.357
+    "eval_accuracy": 0.9774436090225563,
+    "eval_loss": 0.20304328203201294,
+    "eval_runtime": 0.6735,
+    "eval_samples_per_second": 197.472,
+    "eval_steps_per_second": 7.424,
+    "train_loss": 0.4423951647498391,
+    "train_runtime": 48.8199,
+    "train_samples_per_second": 105.899,
+    "train_steps_per_second": 3.38
 }
 ```
 
@@ -124,31 +124,17 @@ At the end of the traning following output files are generated in the output fol
   "hidden_dropout_prob": 0.0,
   "hidden_size": 768,
   "id2label": {
-    "0": "airplane",
-    "1": "automobile",
-    "2": "bird",
-    "3": "cat",
-    "4": "deer",
-    "5": "dog",
-    "6": "frog",
-    "7": "horse",
-    "8": "ship",
-    "9": "truck"
+    "0": "angular_leaf_spot",
+    "1": "bean_rust",
+    "2": "healthy"
   },
   "image_size": 224,
   "initializer_range": 0.02,
   "intermediate_size": 3072,
   "label2id": {
-    "airplane": "0",
-    "automobile": "1",
-    "bird": "2",
-    "cat": "3",
-    "deer": "4",
-    "dog": "5",
-    "frog": "6",
-    "horse": "7",
-    "ship": "8",
-    "truck": "9"
+    "angular_leaf_spot": "0",
+    "bean_rust": "1",
+    "healthy": "2"
   },
   "layer_norm_eps": 1e-12,
   "model_type": "vit",
@@ -159,8 +145,9 @@ At the end of the traning following output files are generated in the output fol
   "problem_type": "single_label_classification",
   "qkv_bias": true,
   "torch_dtype": "float32",
-  "transformers_version": "4.21.0.dev0"
+  "transformers_version": "4.22.0.dev0"
 }
+
 ```
 
 4. pytorch-model.bin - the model output 
