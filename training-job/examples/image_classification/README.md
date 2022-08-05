@@ -28,6 +28,8 @@ FSDP related parameters
 
 ## Running the code
 
+This example requires `transformers` package should be compiled from source
+
 For training the model in GPU
 
 ```
@@ -73,8 +75,6 @@ torchrun --nproc_per_node=4 image_classification.py \
       --fsdp "full_shard auto_wrap" \
       --fsdp_min_num_params 20000
 ```
-
-Note: To train the model using fsdp , `transformers` package should be compiled from source
 
 ## Model 
 
