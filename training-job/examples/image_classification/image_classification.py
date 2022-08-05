@@ -41,7 +41,7 @@ from transformers.utils.versions import require_version
 
 logger = logging.getLogger(__name__)
 
-require_version("datasets>=1.8.0", "To fix: pip install -r training-job/image_classification/requirements.txt")
+require_version("datasets>=1.8.0", "To fix: pip install -r training-job/examples/image_classification/requirements.txt")
 
 MODEL_CONFIG_CLASSES = list(MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
