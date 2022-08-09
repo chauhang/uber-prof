@@ -76,6 +76,13 @@ torchrun --nproc_per_node=4 image_classification.py \
       --fsdp_min_num_params 20000
 ```
 
+
+To train in the slurm environment
+
+```
+sbatch vit.slurm
+```
+
 ## Model 
 
 The script finetunes Vision Transformers model - `google/vit-base-patch16-224-in21k` which is available in hugging face model repostiory.
