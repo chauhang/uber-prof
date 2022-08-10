@@ -31,7 +31,6 @@ Update the `mnist.slurm` - slurm variables based on the environment
 --cpus-per-task=32 --> number of cpus used for training
 --nproc_per_node=4 --> number of gpus needed for training
 ```
-Copy the dependent files if needed (`job_prolog.sh` and `job_epilog.sh`)
 
 Invoke the slurm script using the following command
 
