@@ -14,6 +14,7 @@
 # Based on: https://github.com/pytorch/examples/blob/master/mnist/main.py
 import argparse
 import os
+import functools
 
 import torch
 import torch.distributed as dist
@@ -24,6 +25,7 @@ import torch.optim as optim
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
     FullyShardedDataParallel as FSDP,
 )
+from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
 
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data.distributed import DistributedSampler
@@ -139,7 +141,10 @@ def ddp_main(rank, world_size, args):
 
     model = Net().to(rank)
 
-    model = FSDP(model)
+    auto_wrap_policy = functools.partial(
+        size_based_auto_wrap_policy, min_num_params=20000
+    )
+    model = FSDP(model, auto_wrap_policy=auto_wrap_policy)
 
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 
