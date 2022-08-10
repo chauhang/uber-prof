@@ -4,6 +4,14 @@ In this example we train an image classification model using Hugging Face Traine
 
 More information on fsdp - [here](https://pytorch.org/blog/introducing-pytorch-fully-sharded-data-parallel-api/)
 
+## Install dependent package
+
+To install the required packages, run the following command
+
+```
+pip install -r requirements.txt
+```
+
 ## Parameters for the script
 
 1. dataset_name - name of the hugging face dataset. Any dataset from [hugging face dataset repository](https://huggingface.co/datasets) can be used

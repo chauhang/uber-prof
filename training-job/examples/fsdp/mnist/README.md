@@ -4,6 +4,14 @@ For more information on FSDP - https://pytorch.org/blog/introducing-pytorch-full
 
 The example is adapted from - https://pytorch.org/tutorials/intermediate/FSDP_tutorial.html
 
+## Installing dependent packages
+
+Run the following command to install dependent packages
+
+```
+pip install -r requirements.txt
+```
+
 ## Single node training
 
 To train the mnist model with fsdp, run the following command

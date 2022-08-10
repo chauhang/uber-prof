@@ -460,13 +460,13 @@ if __name__ == "__main__":
             args,
             callbacks=[lr_logger, early_stopping, checkpoint_callback],
             resume_from_checkpoint=checkpoint_list[0],
-            checkpoint_callback=True,
+            enable_checkpointing=True,
         )
     else:
         trainer = pl.Trainer.from_argparse_args(
             args,
             callbacks=[lr_logger, early_stopping, checkpoint_callback],
-            checkpoint_callback=True,
+            enable_checkpointing=True,
         )
 
     trainer.fit(model, dm)
