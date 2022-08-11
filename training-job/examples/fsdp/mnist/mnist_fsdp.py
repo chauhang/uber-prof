@@ -1,22 +1,32 @@
+# !/usr/bin/env/python3
+# Copyright (c) Meta, Inc. and its affiliates.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # Based on: https://github.com/pytorch/examples/blob/master/mnist/main.py
 import argparse
-import functools
 import os
+import functools
 
 import torch
 import torch.distributed as dist
-import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-# from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
     FullyShardedDataParallel as FSDP,
 )
-from torch.distributed.fsdp.wrap import (
-    default_auto_wrap_policy,
-)
+from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
+
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data.distributed import DistributedSampler
 from torchvision import datasets, transforms
@@ -122,7 +132,6 @@ def ddp_main(rank, world_size, args):
 
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
-    my_auto_wrap_policy = functools.partial(default_auto_wrap_policy, min_num_params=20000)
     torch.cuda.set_device(rank)
 
     init_start_event = torch.cuda.Event(enable_timing=True)
@@ -132,7 +141,10 @@ def ddp_main(rank, world_size, args):
 
     model = Net().to(rank)
 
-    model = FSDP(model)
+    auto_wrap_policy = functools.partial(
+        size_based_auto_wrap_policy, min_num_params=20000
+    )
+    model = FSDP(model, auto_wrap_policy=auto_wrap_policy)
 
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 
