@@ -1,0 +1,65 @@
+apiVersion: "kubeflow.org/v1"
+kind: "PyTorchJob"
+metadata:
+  name: "image-classification"
+spec:
+  elasticPolicy:
+    rdzvBackend: c10d
+    minReplicas: 2
+    maxReplicas: 2
+    maxRestarts: 100
+    nProcPerNode: 4
+    rdzvId: "103"
+  pytorchReplicaSpecs:
+    Worker:
+      replicas: 2
+      restartPolicy: OnFailure
+      template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
+        spec:
+          containers:
+            - name: pytorch
+              image: jagadeeshj/pytorch-dist-bert:pt-release
+              imagePullPolicy: Always
+              command: ["/bin/bash", "-c"]
+              args:
+                - echo starting;
+                  cd /data;
+                  torchrun --nnodes 2 --rdzv_id 101 --rdzv_backend=c10d --rdzv_endpoint $PET_RDZV_ENDPOINT --nproc_per_node 4 image_classification.py --dataset_name cifar10 --output_dir ./beans_outputs --remove_unused_columns False --do_train --do_eval --learning_rate 2e-5 --num_train_epochs 5 --per_device_train_batch_size 8 --per_device_eval_batch_size 8 --logging_strategy steps --logging_steps 10 --evaluation_strategy epoch --save_strategy epoch --load_best_model_at_end True --save_total_limit 3 --seed 1337;
+              env:
+                - name: NCCL_DEBUG
+                  value: INFO
+                - name: ENABLE_NCCL_BASE_COLLECTIVES
+                  value: "0"
+                - name: NCCL_IB_DISABLE
+                  value: "1"
+                - name: NCCL_P2P_DISABLE
+                  value: "1"
+                - name: NCCL_NET
+                  value: Socket
+                - name: CUDA_LAUNCH_BLOCKING
+                  value: "1"
+                # - name: FI_PROVIDER
+                #   value: efa
+              resources:
+                limits:
+                  # hugepages-2Mi: 5120Mi
+                  # vpc.amazonaws.com/efa: 1
+                  memory: 16000Mi
+                  nvidia.com/gpu: 4
+                  cpu: 28000m
+              volumeMounts:
+                - name: persistent-storage
+                  mountPath: /data
+                - mountPath: /dev/shm
+                  name: dshm
+          volumes:
+            - name: persistent-storage
+              persistentVolumeClaim:
+                claimName: fsx-claim
+            - name: dshm
+              emptyDir:
+                medium: Memory
+
