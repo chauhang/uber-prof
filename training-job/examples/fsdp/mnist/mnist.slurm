@@ -7,7 +7,10 @@
 #SBATCH --cpus-per-task=32
 
 
+master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
+export MASTER_ADDR=$master_addr
+
 ### the command to run
 dcgmi profile --pause
-srun --prolog ../../../job_prolog.sh --epilog ../../../job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true torchrun  --nproc_per_node=4 mnist_fsdp.py
+srun --prolog ../../../job_prolog.sh --epilog ../../../job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true torchrun  --nnodes 2 --rdzv_id 101 --rdzv_backend c10d --rdzv_endpoint "$master_addr:29500" --nproc_per_node=4  mnist_fsdp.py
 dcgmi profile --resume
