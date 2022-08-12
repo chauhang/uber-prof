@@ -25,3 +25,9 @@ To train using fully sharded data parallel (FSDP)
 ```
 torchrun --nproc_per_node=4 dcgan_fsdp.py
 ```
+
+To train in slurm environment
+
+```
+sbatch gan.slurm
+```
