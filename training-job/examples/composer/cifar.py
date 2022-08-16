@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import time
 
 import argparse
@@ -78,7 +79,9 @@ def baseline_model(train_dataloader, test_dataloader, args):
     start_time = time.perf_counter()
     trainer.fit()
     end_time = time.perf_counter()
-    print(f"It took {end_time - start_time:0.4f} seconds to train")
+    rank = os.environ.get("RANK", 0)
+    if rank == 0:
+        print(f"It took {end_time - start_time:0.4f} seconds to train")
 
 
 def accelerated_model(train_dataloader, test_dataloader, args):
@@ -124,7 +127,9 @@ def accelerated_model(train_dataloader, test_dataloader, args):
     trainer.fit()
     end_time = time.perf_counter()
     three_epochs_accelerated_time = end_time - start_time
-    print(f"It took {three_epochs_accelerated_time:0.4f} seconds to train")
+    rank = os.environ.get("RANK", 0)
+    if rank == 0:
+        print(f"It took {three_epochs_accelerated_time:0.4f} seconds to train")
 
 
 def main():
