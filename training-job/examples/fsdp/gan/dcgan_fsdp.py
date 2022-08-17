@@ -180,13 +180,9 @@ def train(netG, netD, dataloader, local_rank, args):
 
     nz = args["nz"]
 
-    device = torch.device(
-        "cuda:0" if (torch.cuda.is_available() and torch.cuda.device_count() > 0) else "cpu"
-    )
-
     # Create batch of latent vectors that we will use to visualize
     #  the progression of the generator
-    fixed_noise = torch.randn(64, nz, 1, 1, device=device)
+    fixed_noise = torch.randn(64, nz, 1, 1, device=local_rank)
 
     # Establish convention for real and fake labels during training
     real_label = 1.0
@@ -220,11 +216,11 @@ def train(netG, netD, dataloader, local_rank, args):
             ## Train with all-real batch
             netD.zero_grad()
             # Format batch
-            real_cpu = data[0].to(local_rank)
-            b_size = real_cpu.size(0)
-            label = torch.full((b_size,), real_label, dtype=torch.float, device=device)
+            real = data[0].to(local_rank)
+            b_size = real.size(0)
+            label = torch.full((b_size,), real_label, dtype=torch.float, device=local_rank)
             # Forward pass real batch through D
-            output = netD(real_cpu).view(-1)
+            output = netD(real).view(-1)
             output = output.to(local_rank)
             label = label.to(local_rank)
             # Calculate loss on all-real batch
@@ -235,7 +231,7 @@ def train(netG, netD, dataloader, local_rank, args):
 
             ## Train with all-fake batch
             # Generate batch of latent vectors
-            noise = torch.randn(b_size, nz, 1, 1, device=device)
+            noise = torch.randn(b_size, nz, 1, 1, device=local_rank)
             # Generate fake image batch with G
             fake = netG(noise.to(local_rank))
             label.fill_(fake_label)
