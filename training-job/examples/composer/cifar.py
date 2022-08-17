@@ -80,7 +80,7 @@ def baseline_model(train_dataloader, test_dataloader, args):
     trainer.fit()
     end_time = time.perf_counter()
     rank = os.environ.get("RANK", 0)
-    if rank == 0:
+    if int(rank) == 0:
         print(f"It took {end_time - start_time:0.4f} seconds to train")
 
 
@@ -128,7 +128,7 @@ def accelerated_model(train_dataloader, test_dataloader, args):
     end_time = time.perf_counter()
     three_epochs_accelerated_time = end_time - start_time
     rank = os.environ.get("RANK", 0)
-    if rank == 0:
+    if int(rank) == 0:
         print(f"It took {three_epochs_accelerated_time:0.4f} seconds to train")
 
 
