@@ -9,5 +9,6 @@
 
 ### the command to run
 dcgmi profile --pause
-srun --prolog job_prolog.sh --epilog job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true torchrun  --nproc_per_node=4 mnist_fsdp.py
+srun --prolog ../../job_prolog.sh --epilog ../../job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true torchrun --nproc_per_node=1 cifar.py
 dcgmi profile --resume
+

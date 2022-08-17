@@ -8,7 +8,31 @@ The example trains a baseline model and an accelerated model with same number of
 
 For more information - [click here](https://github.com/mosaicml/composer)
 
-## Run job
+## Install dependent packages
+
+Run the following command to install dependent packages
+
+```
+pip install -r requirements.txt
+```
+
+## Train in standalone machine
+
+To train in cpu
+
+```
+python cifar.py --device cpu
+```
+
+and to train in gpu
+
+```
+python cifar.py
+```
+
+## Train in slurm environment
+
+Ensure to copy dependent files (`job_prolog.sh` and `job_epilog.sh`) from home folder.
 
 ```bash
 # Add executable permission to files

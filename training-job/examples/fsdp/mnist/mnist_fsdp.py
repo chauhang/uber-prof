@@ -1,30 +1,40 @@
+# !/usr/bin/env/python3
+# Copyright (c) Meta, Inc. and its affiliates.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # Based on: https://github.com/pytorch/examples/blob/master/mnist/main.py
 import argparse
-import functools
 import os
+import functools
 
 import torch
 import torch.distributed as dist
-import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-# from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp.fully_sharded_data_parallel import (
     FullyShardedDataParallel as FSDP,
 )
-from torch.distributed.fsdp.wrap import (
-    default_auto_wrap_policy,
-)
+from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
+
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data.distributed import DistributedSampler
 from torchvision import datasets, transforms
 
 
-def setup(rank, world_size):
+def setup():
     # initialize the process group
-    dist.init_process_group("nccl", rank=rank, world_size=world_size)
+    dist.init_process_group("nccl")
 
 
 def cleanup():
@@ -57,13 +67,13 @@ class Net(nn.Module):
         return output
 
 
-def train(args, model, rank, world_size, train_loader, optimizer, epoch, sampler=None):
+def train(model, rank, local_rank, train_loader, optimizer, epoch, sampler=None):
     model.train()
-    ddp_loss = torch.zeros(2).to(rank)
+    ddp_loss = torch.zeros(2).to(local_rank)
     if sampler:
         sampler.set_epoch(epoch)
     for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(rank), target.to(rank)
+        data, target = data.to(local_rank), target.to(local_rank)
         optimizer.zero_grad()
         output = model(data)
         loss = F.nll_loss(output, target, reduction="sum")
@@ -77,13 +87,12 @@ def train(args, model, rank, world_size, train_loader, optimizer, epoch, sampler
         print("Train Epoch: {} \tLoss: {:.6f}".format(epoch, ddp_loss[0] / ddp_loss[1]))
 
 
-def test(model, rank, world_size, test_loader):
+def test(model, rank, local_rank, test_loader):
     model.eval()
-    correct = 0
-    ddp_loss = torch.zeros(3).to(rank)
+    ddp_loss = torch.zeros(3).to(local_rank)
     with torch.no_grad():
         for data, target in test_loader:
-            data, target = data.to(rank), target.to(rank)
+            data, target = data.to(local_rank), target.to(local_rank)
             output = model(data)
             ddp_loss[0] += F.nll_loss(output, target, reduction="sum").item()  # sum up batch loss
             pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
@@ -101,8 +110,8 @@ def test(model, rank, world_size, test_loader):
         )
 
 
-def ddp_main(rank, world_size, args):
-    setup(rank, world_size)
+def ddp_main(rank, local_rank, world_size, args):
+    setup()
 
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
@@ -122,25 +131,27 @@ def ddp_main(rank, world_size, args):
 
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
-    my_auto_wrap_policy = functools.partial(default_auto_wrap_policy, min_num_params=20000)
-    torch.cuda.set_device(rank)
+    torch.cuda.set_device(local_rank)
 
     init_start_event = torch.cuda.Event(enable_timing=True)
     init_end_event = torch.cuda.Event(enable_timing=True)
 
     init_start_event.record()
 
-    model = Net().to(rank)
+    model = Net().to(local_rank)
 
-    model = FSDP(model)
+    auto_wrap_policy = functools.partial(
+        size_based_auto_wrap_policy, min_num_params=20000
+    )
+    model = FSDP(model, auto_wrap_policy=auto_wrap_policy)
 
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 
     scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
 
     for epoch in range(1, args.epochs + 1):
-        train(args, model, rank, world_size, train_loader, optimizer, epoch, sampler=sampler1)
-        test(model, rank, world_size, test_loader)
+        train(model, rank, local_rank, train_loader, optimizer, epoch, sampler=sampler1)
+        test(model, rank, local_rank, test_loader)
         scheduler.step()
 
     init_end_event.record()
@@ -204,5 +215,6 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
 
     WORLD_SIZE = int(os.environ["WORLD_SIZE"])
-    rank = int(os.environ["LOCAL_RANK"])
-    ddp_main(rank, WORLD_SIZE, args)
+    local_rank = int(os.environ["LOCAL_RANK"])
+    rank = int(os.environ["RANK"])
+    ddp_main(rank, local_rank, WORLD_SIZE, args)

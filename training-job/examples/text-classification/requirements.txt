@@ -1,0 +1,7 @@
+torch
+torchtext
+pytorch-lightning
+torchmetrics
+datasets
+transformers
+sklearn

@@ -1,3 +1,16 @@
+# !/usr/bin/env/python3
+# Copyright (c) Meta, Inc. and its affiliates.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # pylint: disable=arguments-differ
 # pylint: disable=unused-argument
 # pylint: disable=abstract-method
@@ -8,7 +21,6 @@ import math
 import os
 from argparse import ArgumentParser
 
-import pandas as pd
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
@@ -17,11 +29,11 @@ from pytorch_lightning.callbacks import (
     ModelCheckpoint,
     LearningRateMonitor,
 )
-from sklearn.datasets import fetch_20newsgroups
 from sklearn.metrics import accuracy_score
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
-from torch.utils.data.dataset import IterDataPipe, random_split
+from torch.utils.data.dataset import random_split
+from torchdata.datapipes.iter import IterDataPipe
 from torchtext.data.functional import to_map_style_dataset
 from torchtext.datasets import AG_NEWS
 from transformers import BertModel, BertTokenizer, AdamW
@@ -448,13 +460,13 @@ if __name__ == "__main__":
             args,
             callbacks=[lr_logger, early_stopping, checkpoint_callback],
             resume_from_checkpoint=checkpoint_list[0],
-            checkpoint_callback=True,
+            enable_checkpointing=True,
         )
     else:
         trainer = pl.Trainer.from_argparse_args(
             args,
             callbacks=[lr_logger, early_stopping, checkpoint_callback],
-            checkpoint_callback=True,
+            enable_checkpointing=True,
         )
 
     trainer.fit(model, dm)
