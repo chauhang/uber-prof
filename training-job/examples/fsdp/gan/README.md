@@ -1,6 +1,6 @@
 ## GAN
 
-This example trains a generative adversarian network to generate new celebrities after showing the picture of real celebreties
+This example trains a generative adversarial network to generate new celebrities after showing the picture of real celebreties
 
 The code is adapted from https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html . 
 
