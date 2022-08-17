@@ -17,13 +17,13 @@ python dcgan_dp.py
 To train using  Distributed data parallel(DDP),
 
 ```
-torchrun --nproc_per_node=4 dcgan_ddp.py
+torchrun --nproc_per_node=4 dcgan_fsdp.py
 ```
 
 To train using fully sharded data parallel (FSDP)
 
 ```
-torchrun --nproc_per_node=4 dcgan_fsdp.py
+torchrun --nproc_per_node=4 dcgan_fsdp.py --fsdp true
 ```
 
 To train in slurm environment

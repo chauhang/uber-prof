@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import argparse
 import functools
+
 # %matplotlib inline
 import os
 import random
@@ -20,59 +21,13 @@ from torch.distributed.fsdp.wrap import (
     size_based_auto_wrap_policy,
 )
 
-# Set random seed for reproducibility
-manualSeed = 999
-# manualSeed = random.randint(1, 10000) # use if you want new results
-print("Random Seed: ", manualSeed)
-random.seed(manualSeed)
-torch.manual_seed(manualSeed)
 
-
-# Root directory for dataset
-# dataroot = "img_align_celeba/img_align_celeba"
-dataroot = "img_align_celeba"
-
-# Number of workers for dataloader
-workers = 2
-
-# Batch size during training
-batch_size = 128
-
-# Spatial size of training images. All images will be resized to this
-#   size using a transformer.
-image_size = 64
-
-# Number of channels in the training images. For color images this is 3
-nc = 3
-
-# Size of z latent vector (i.e. size of generator input)
-nz = 100
-
-# Size of feature maps in generator
-ngf = 64
-
-# Size of feature maps in discriminator
-ndf = 64
-
-# Number of training epochs
-num_epochs = 1
-
-# Learning rate for optimizers
-lr = 0.0002
-
-# Beta1 hyperparam for Adam optimizers
-beta1 = 0.5
-
-# Number of GPUs available. Use 0 for CPU mode.
-ngpu = 4
-
-# Decide which device we want to run on
-device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
-
-
-def setup():
+def setup(rank, world_size, args):
     # initialize the process group
-    dist.init_process_group("nccl")
+    if args["fsdp"]:
+        dist.init_process_group("nccl")
+    else:
+        dist.init_process_group("nccl", rank=rank, world_size=world_size)
 
 
 def cleanup():
@@ -83,6 +38,12 @@ def prepare_data():
 
     # We can use an image folder dataset the way we have it setup.
     # Create the dataset
+    dataroot = "img_align_celeba"
+
+    # Spatial size of training images. All images will be resized to this
+    #   size using a transformer.
+    image_size = 64
+
     dataset = dset.ImageFolder(
         root=dataroot,
         transform=transforms.Compose(
@@ -96,7 +57,7 @@ def prepare_data():
     )
     # Create the dataloader
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=batch_size, shuffle=True, num_workers=workers
+        dataset, batch_size=args["batch_size"], shuffle=True, num_workers=args["num_workers"]
     )
 
     return dataloader
@@ -115,9 +76,10 @@ def weights_init(m):
 
 
 class Generator(nn.Module):
-    def __init__(self, ngpu):
+    def __init__(self, nc, nz):
         super(Generator, self).__init__()
-        self.ngpu = ngpu
+        # Size of feature maps in generator
+        ngf = 64
         self.main = nn.Sequential(
             # input is Z, going into a convolution
             nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False),
@@ -145,29 +107,30 @@ class Generator(nn.Module):
         return self.main(input)
 
 
-def init_generator(local_rank):
+def init_generator(local_rank, rank, args):
     # Create the generator
-    netG = Generator(ngpu).to(local_rank)
+    netG = Generator(args["nc"], args["nz"]).to(local_rank)
 
-    my_auto_wrap_policy = functools.partial(
-        size_based_auto_wrap_policy, min_num_params=20000
-    )
-    netG = FullyShardedDataParallel(netG, auto_wrap_policy=my_auto_wrap_policy)
+    my_auto_wrap_policy = functools.partial(size_based_auto_wrap_policy, min_num_params=20000)
+    if args["fsdp"]:
+        netG = FullyShardedDataParallel(netG, auto_wrap_policy=my_auto_wrap_policy)
 
     # Apply the weights_init function to randomly initialize all weights
     #  to mean=0, stdev=0.02.
     netG.apply(weights_init)
 
     # Print the model
-    print(netG)
+    if rank == 0:
+        print(netG)
 
     return netG
 
 
 class Discriminator(nn.Module):
-    def __init__(self, ngpu):
+    def __init__(self, nc):
         super(Discriminator, self).__init__()
-        self.ngpu = ngpu
+        # Size of feature maps in discriminator
+        ndf = 64
         self.main = nn.Sequential(
             # input is (nc) x 64 x 64
             nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
@@ -193,27 +156,33 @@ class Discriminator(nn.Module):
         return self.main(input)
 
 
-def init_discriminator(local_rank):
+def init_discriminator(local_rank, rank, args):
     # Create the Discriminator
-    netD = Discriminator(ngpu).to(local_rank)
-    my_auto_wrap_policy = functools.partial(
-        size_based_auto_wrap_policy, min_num_params=20000
-    )
-    netD = FullyShardedDataParallel(netD, auto_wrap_policy=my_auto_wrap_policy)
+    netD = Discriminator(args["nc"]).to(local_rank)
+    my_auto_wrap_policy = functools.partial(size_based_auto_wrap_policy, min_num_params=20000)
+    if args["fsdp"]:
+        netD = FullyShardedDataParallel(netD, auto_wrap_policy=my_auto_wrap_policy)
 
     # Apply the weights_init function to randomly initialize all weights
     #  to mean=0, stdev=0.2.
     netD.apply(weights_init)
 
     # Print the model
-    print(netD)
+    if rank == 0:
+        print(netD)
 
     return netD
 
 
-def train(netG, netD, dataloader, local_rank):
+def train(netG, netD, dataloader, local_rank, args):
     # Initialize BCELoss function
     criterion = nn.BCELoss()
+
+    nz = args["nz"]
+
+    device = torch.device(
+        "cuda:0" if (torch.cuda.is_available() and torch.cuda.device_count() > 0) else "cpu"
+    )
 
     # Create batch of latent vectors that we will use to visualize
     #  the progression of the generator
@@ -223,9 +192,12 @@ def train(netG, netD, dataloader, local_rank):
     real_label = 1.0
     fake_label = 0.0
 
+    # Beta1 hyperparam for Adam optimizers
+    beta1 = 0.5
+
     # Setup Adam optimizers for both G and D
-    optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
-    optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
+    optimizerD = optim.Adam(netD.parameters(), lr=args["lr"], betas=(beta1, 0.999))
+    optimizerG = optim.Adam(netG.parameters(), lr=args["lr"], betas=(beta1, 0.999))
 
     # Training Loop
 
@@ -234,6 +206,8 @@ def train(netG, netD, dataloader, local_rank):
     G_losses = []
     D_losses = []
     iters = 0
+
+    num_epochs = args["num_epochs"]
 
     # For each epoch
     for epoch in range(num_epochs):
@@ -322,14 +296,14 @@ def train(netG, netD, dataloader, local_rank):
             iters += 1
 
 
-def fsdp_main(local_rank):
+def fsdp_main(local_rank, world_size, rank, args):
     if torch.cuda.is_available():
         torch.cuda.set_device(local_rank)
-    setup()
+    setup(local_rank, world_size, args)
     dataloader = prepare_data()
-    netG = init_generator(local_rank)
-    netD = init_discriminator(local_rank)
-    train(netG, netD, dataloader, local_rank)
+    netG = init_generator(local_rank, rank, args)
+    netD = init_discriminator(local_rank, rank, args)
+    train(netG, netD, dataloader, local_rank, args)
     cleanup()
 
 
@@ -337,14 +311,68 @@ if __name__ == "__main__":
     WORLD_SIZE = torch.cuda.device_count()
     parser = argparse.ArgumentParser(description="PyTorch MNIST Example")
     parser.add_argument(
-        "--epochs",
+        "--num_epochs",
         type=int,
-        default=10,
+        default=1,
         metavar="N",
         help="number of epochs to train (default: 14)",
     )
+
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=0.0002,
+        help="Learning rate (default: 0.0002)",
+    )
+
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=128,
+        help="Training batch size (default: 128)",
+    )
+
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=128,
+        help="Number of workers(default: 2)",
+    )
+
+    parser.add_argument(
+        "--nc",
+        type=int,
+        default=3,
+        help="Number of channels in training images(default: 3)",
+    )
+
+    parser.add_argument(
+        "--nz",
+        type=int,
+        default=100,
+        help="Size of z latent vector (default: 100)",
+    )
+
+    parser.add_argument(
+        "--fsdp",
+        type=bool,
+        default=False,
+        help="Train using pytorch fsdp (default: False)",
+    )
     args = parser.parse_args()
-    # WORLD_SIZE = int(os.environ["WORLD_SIZE"])
+
+    args = vars(args)
+
+    WORLD_SIZE = int(os.environ["WORLD_SIZE"])
     local_rank = int(os.environ["LOCAL_RANK"])
     rank = int(os.environ["RANK"])
-    fsdp_main(local_rank)
+
+    # Set random seed for reproducibility
+    manualSeed = 999
+    # manualSeed = random.randint(1, 10000) # use if you want new results
+    if rank == 0:
+        print("Random Seed: ", manualSeed)
+    random.seed(manualSeed)
+    torch.manual_seed(manualSeed)
+
+    fsdp_main(local_rank, WORLD_SIZE, rank, args)
