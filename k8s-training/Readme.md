@@ -45,7 +45,7 @@ eksctl create cluster -f cluster.yaml
 ## Install PyTorch Training Operator
 
 ```bash
-kubectl apply -f kubectl apply -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=v1.3.0"
+kubectl apply -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=v1.3.0"
 ```
 
 ## Build image

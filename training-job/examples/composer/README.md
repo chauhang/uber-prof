@@ -86,3 +86,15 @@ Epoch 3, Batch 147 (val): 100%|██████████| 10/10 [00:03<00:0
 Epoch 3, Batch 147 (val): 100%|██████████| 10/10 [00:03<00:00,  3.01it/s, accuracy/val=0.4774]
 It took 71.8670 seconds to train█████████| 10/10 [00:03<00:00,  3.10it/s, accuracy/val=0.4774]
 ```
+
+## Training in kubernetes cluster 
+
+### Step 1: [Install Kubeflow Training Operator](../../../k8s-training/Readme.md#install-pytorch-training-operator)
+
+### Step 2: [Build docker image](../../../k8s-training/Readme.md###-Build-training-image)
+
+### Step 3: Deploy yaml
+
+```bash
+kubectl apply -f cifar.yaml
+```

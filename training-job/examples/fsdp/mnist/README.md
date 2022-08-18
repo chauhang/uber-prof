@@ -83,3 +83,15 @@ FullyShardedDataParallel(
 )
 
 ```
+
+## Training in kubernetes cluster 
+
+### Step 1: [Install Kubeflow Training Operator](../../../k8s-training/Readme.md#install-pytorch-training-operator)
+
+### Step 2: [Build docker image](../../../k8s-training/Readme.md###-Build-training-image)
+
+### Step 3: Deploy yaml
+
+```bash
+kubectl apply -f mnist_fsdp.yaml
+```
