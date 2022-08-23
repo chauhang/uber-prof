@@ -21,13 +21,13 @@ spec:
         spec:
           containers:
             - name: pytorch
-              image: jagadeeshj/pytorch-dist-bert:pt-12
+              image: jagadeeshj/pytorch:latest
               imagePullPolicy: Always
               command: ["/bin/bash", "-c"]
               args:
                 - echo starting;
                   cd /data;
-                  torchrun --rdzv_backend $PET_RDZV_BACKEND --rdzv_endpoint $PET_RDZV_ENDPOINT --nnodes $PET_NNODES  --nproc_per_node $PET_N_PROC_PER_NODE pytorch_news_classifier.py;
+                  torchrun --rdzv_backend $PET_RDZV_BACKEND --rdzv_endpoint $PET_RDZV_ENDPOINT --nnodes $PET_NNODES  --nproc_per_node $PET_NPROC_PER_NODE pytorch_news_classifier.py;
               env:
                 - name: LOGLEVEL
                   value: INFO

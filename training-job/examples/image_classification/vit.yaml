@@ -27,7 +27,7 @@ spec:
               args:
                 - echo starting;
                   cd /data;
-                  torchrun --nnodes 2 --rdzv_id 101 --rdzv_backend=c10d --rdzv_endpoint $PET_RDZV_ENDPOINT --nproc_per_node 4 image_classification.py --dataset_name cifar10 --output_dir ./beans_outputs --remove_unused_columns False --do_train --do_eval --learning_rate 2e-5 --num_train_epochs 5 --per_device_train_batch_size 8 --per_device_eval_batch_size 8 --logging_strategy steps --logging_steps 10 --evaluation_strategy epoch --save_strategy epoch --load_best_model_at_end True --save_total_limit 3 --seed 1337;
+                  torchrun --nnodes 2 --rdzv_id 101 --rdzv_backend=c10d --rdzv_endpoint $PET_RDZV_ENDPOINT --nproc_per_node $PET_NPROC_PER_NODE image_classification.py --dataset_name cifar10 --output_dir ./beans_outputs --remove_unused_columns False --do_train --do_eval --learning_rate 2e-5 --num_train_epochs 5 --per_device_train_batch_size 8 --per_device_eval_batch_size 8 --logging_strategy steps --logging_steps 10 --evaluation_strategy epoch --save_strategy epoch --load_best_model_at_end True --save_total_limit 3 --seed 1337;
               env:
                 - name: NCCL_DEBUG
                   value: INFO

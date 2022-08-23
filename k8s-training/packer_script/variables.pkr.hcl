@@ -1,6 +1,6 @@
 variable "ami_prefix" {
   type    = string
-  default = "learn-packer-linux-aws-redis"
+  default = "aws-nccl-efa"
 }
 variable "instance_type" {
   type    = string

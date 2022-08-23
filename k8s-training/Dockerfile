@@ -1,7 +1,6 @@
-FROM nvcr.io/nvidia/cuda:11.3.0-cudnn8-devel-ubuntu20.04
-# For EFA Enabled docker image build base image form packer script
-# FROM jagadeeshj/aws-efa-nccl:v1
+ARG BASE_IMAGE=nvcr.io/nvidia/cuda:11.3.0-cudnn8-devel-ubuntu20.04
 
+FROM ${BASE_IMAGE}
 
 RUN apt-get install -y python3-venv
 

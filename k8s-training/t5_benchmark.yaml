@@ -27,7 +27,7 @@ spec:
               args:
                 - echo starting;
                   cd /data/t5_11;
-                  torchrun --rdzv_backend $PET_RDZV_BACKEND --rdzv_endpoint $PET_RDZV_ENDPOINT --nnodes $PET_NNODES --nproc_per_node $PET_N_PROC_PER_NODE main_benchmark.py;
+                  torchrun --rdzv_backend $PET_RDZV_BACKEND --rdzv_endpoint $PET_RDZV_ENDPOINT --nnodes $PET_NNODES --nproc_per_node $PET_NPROC_PER_NODE main_benchmark.py;
               env:
                 - name: LOGLEVEL
                   value: INFO
