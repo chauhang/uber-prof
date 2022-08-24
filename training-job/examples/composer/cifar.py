@@ -50,7 +50,7 @@ def prepare():
 
 
 def baseline_model(train_dataloader, test_dataloader, args):
-    model = models.ComposerResNetCIFAR("resnet_56")
+    model = models.composer_resnet_cifar("resnet_56")
 
     optimizer = composer.optim.DecoupledSGDW(
         model.parameters(),  # Model parameters to update
@@ -100,7 +100,7 @@ def accelerated_model(train_dataloader, test_dataloader, args):
 
     algorithms = [colout, blurpool, prog_resize]
 
-    model = models.ComposerResNetCIFAR("resnet_56")
+    model = models.composer_resnet_cifar("resnet_56")
 
     optimizer = composer.optim.DecoupledSGDW(
         model.parameters(), lr=0.05, momentum=0.9, weight_decay=2.0e-3
