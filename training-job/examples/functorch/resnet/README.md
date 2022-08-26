@@ -176,6 +176,80 @@ We can visibly see a huge improvement in prediction time with and without vmap.
 Without vmap it takes 0.32 seconds to predict where as with vmap it takes only `0.019` seconds to predict
 
 
+## Torchserve comparison
 
+Make sure `torchserve`, `torch-model-archiver` and `captum` is installed.
 
+To generate the mar file, run the following series of commands
+
+```
+mkdir model_store
+torch-model-archiver --model-name resnet-18 --version 1.0 --model-file model.py --serialized-file resnet18-f37072fd.pth --handler image_classifier
+torch-model-archiver --model-name second-resnet-18 --version 1.0 --model-file model.py --serialized-file resnet18-f37072fd.pth --handler image_classifier
+mv *.mar model_store
+```
+
+Start torchserve
+```
+torchserve --ncs --start --model-store model_store/
+```
+
+Register both the models
+
+```
+curl -v -X POST "http://localhost:8081/models?initial_workers=1&synchronous=false&url=resnet-18.mar"
+curl -v -X POST "http://localhost:8081/models?initial_workers=1&synchronous=false&url=second-resnet-18.mar"
+```
+
+Once the models are registered, run the inference using curl command
+
+```
+curl -w 'Total: %{time_total}s\n' http://127.0.0.1:8080/predictions/second-resnet-18 -T kitten.jpg & curl -w 'Total: %{time_total}s\n' http://127.0.0.1:8080/predictions/resnet-18 -T kitten.jpg &
+```
+
+The command prints the total time taken for the request
+
+Sample response
+
+```
+$ curl -w 'Total: %{time_total}s\n' http://127.0.0.1:8080/predictions/second-resnet-18 -T kitten.jpg & curl -w 'Total: %{time_total}s\n' http://127.0.0.1:8080/predictions/resnet-18 -T kitten.jpg &
+[1] 2637
+[2] 2638
+(base) ubuntu@ip-172-31-22-204:~/functorch$ 2022-08-26T03:42:59,877 [INFO ] W-9000-resnet-18_1.0 org.pytorch.serve.wlm.WorkerThread - Flushing req. to backend at: 1661485379877
+2022-08-26T03:42:59,877 [INFO ] W-9001-second-resnet-18_1.0 org.pytorch.serve.wlm.WorkerThread - Flushing req. to backend at: 1661485379877
+2022-08-26T03:42:59,878 [INFO ] W-9000-resnet-18_1.0-stdout MODEL_LOG - Backend received inference at: 1661485379
+2022-08-26T03:42:59,878 [INFO ] W-9001-second-resnet-18_1.0-stdout MODEL_LOG - Backend received inference at: 1661485379
+2022-08-26T03:42:59,892 [INFO ] W-9001-second-resnet-18_1.0 org.pytorch.serve.wlm.WorkerThread - Backend response time: 14
+2022-08-26T03:42:59,892 [INFO ] W-9001-second-resnet-18_1.0-stdout MODEL_METRICS - HandlerTime.Milliseconds:12.95|#ModelName:second-resnet-18,Level:Model|#hostname:ip-172-31-22-204,requestID:a93cb112-7344-48da-8800-506628631f4e,timestamp:1661485379
+2022-08-26T03:42:59,892 [INFO ] W-9001-second-resnet-18_1.0 ACCESS_LOG - /127.0.0.1:58782 "PUT /predictions/second-resnet-18 HTTP/1.1" 200 15
+2022-08-26T03:42:59,892 [INFO ] W-9001-second-resnet-18_1.0-stdout MODEL_METRICS - PredictionTime.Milliseconds:12.99|#ModelName:second-resnet-18,Level:Model|#hostname:ip-172-31-22-204,requestID:a93cb112-7344-48da-8800-506628631f4e,timestamp:1661485379
+2022-08-26T03:42:59,892 [INFO ] W-9001-second-resnet-18_1.0 TS_METRICS - Requests2XX.Count:1|#Level:Host|#hostname:ip-172-31-22-204,timestamp:1661484652
+2022-08-26T03:42:59,892 [DEBUG] W-9001-second-resnet-18_1.0 org.pytorch.serve.job.Job - Waiting time ns: 478965, Backend time ns: 14992099
+2022-08-26T03:42:59,893 [INFO ] W-9001-second-resnet-18_1.0 TS_METRICS - QueueTime.ms:0|#Level:Host|#hostname:ip-172-31-22-204,timestamp:1661485379
+2022-08-26T03:42:59,893 [INFO ] W-9001-second-resnet-18_1.0 TS_METRICS - WorkerThreadTime.ms:2|#Level:Host|#hostname:ip-172-31-22-204,timestamp:1661485379
+{
+  "281": 0.40966328978538513,
+  "282": 0.3467046022415161,
+  "285": 0.1300288587808609,
+  "287": 0.02391953393816948,
+  "463": 0.011532200500369072
+}Total: 0.020571s
+2022-08-26T03:42:59,893 [INFO ] W-9000-resnet-18_1.0-stdout MODEL_METRICS - HandlerTime.Milliseconds:14.39|#ModelName:resnet-18,Level:Model|#hostname:ip-172-31-22-204,requestID:a25a4e0a-c7f2-46f0-b37e-6a44c8c9af7c,timestamp:1661485379
+2022-08-26T03:42:59,893 [INFO ] W-9000-resnet-18_1.0 org.pytorch.serve.wlm.WorkerThread - Backend response time: 15
+2022-08-26T03:42:59,893 [INFO ] W-9000-resnet-18_1.0-stdout MODEL_METRICS - PredictionTime.Milliseconds:14.45|#ModelName:resnet-18,Level:Model|#hostname:ip-172-31-22-204,requestID:a25a4e0a-c7f2-46f0-b37e-6a44c8c9af7c,timestamp:1661485379
+2022-08-26T03:42:59,893 [INFO ] W-9000-resnet-18_1.0 ACCESS_LOG - /127.0.0.1:58780 "PUT /predictions/resnet-18 HTTP/1.1" 200 16
+2022-08-26T03:42:59,894 [INFO ] W-9000-resnet-18_1.0 TS_METRICS - Requests2XX.Count:1|#Level:Host|#hostname:ip-172-31-22-204,timestamp:1661484652
+2022-08-26T03:42:59,894 [DEBUG] W-9000-resnet-18_1.0 org.pytorch.serve.job.Job - Waiting time ns: 120649, Backend time ns: 16676759
+2022-08-26T03:42:59,894 [INFO ] W-9000-resnet-18_1.0 TS_METRICS - QueueTime.ms:0|#Level:Host|#hostname:ip-172-31-22-204,timestamp:1661485379
+2022-08-26T03:42:59,894 [INFO ] W-9000-resnet-18_1.0 TS_METRICS - WorkerThreadTime.ms:2|#Level:Host|#hostname:ip-172-31-22-204,timestamp:1661485379
+{
+  "281": 0.40966328978538513,
+  "282": 0.3467046022415161,
+  "285": 0.1300288587808609,
+  "287": 0.02391953393816948,
+  "463": 0.011532200500369072
+}Total: 0.021851s
+
+```
+Although the total time taken for each request is `0.021 seconds`, the prediction time for request is ~ `0.013 seconds`
 
