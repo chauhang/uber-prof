@@ -59,9 +59,11 @@ kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/container
 kubectl apply -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=v1.3.0"
 ```
 
-## Build image
+## Build Contaner Base Image
 
-## Build base image from packer script
+### AWS-EKS
+
+For AWS EFA enabled base image use the packer script to build the base image.
 
 ```bash
 cd packer_script
@@ -81,12 +83,21 @@ Build image
 packer build .
 ```
 
-### Build training image
+Use the resulting image as base image for the dockerfile
+
+### GCP-GKE
+
+For Fast Socket gNIC enabled base image use a Deep Learining VM Image as base image.
+
+:information_source: To view list of container images available `gcloud container images list \
+--repository="gcr.io/deeplearning-platform-release"
+`
+
+## Build training image
 
 ```bash
-docker built -t k8s-training/pytorch:v1.12.0 .
-
-Note: For EFA support use the image built with packer script as base image.
+# For EKS with EFA support
+docker built --build-arg BASE_IAMGE=<Image-Built-From-Above-Packer-Script> -t k8s-training/pytorch:v1.12.0 .
 
 # For GKE with Fast Socket and gNIC 
 docker built --build-arg BASE_IAMGE=gcr.io/deeplearning-platform-release/base-cu113 -t k8s-training/pytorch:v1.12.0 .
