@@ -142,4 +142,8 @@ build {
   //     "systemctl restart amazon-cloudwatch-agent.service",
   //   ]
   // }
+  post-processor "docker-tag" {
+      repository =  "${var.repo_name}/${var.image_name}"
+      tags = [ "${var.image_tag}" ]
+    }
 }

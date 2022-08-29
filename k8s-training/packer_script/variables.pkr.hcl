@@ -42,3 +42,15 @@ variable "efa_installer_fn" {
   type    = string
   default = "aws-efa-installer-latest.tar.gz"
 }
+variable "repo_name" {
+  type    = string
+  default = "pytorch"
+}
+variable "image_name" {
+  type    = string
+  default = "pytorch-aws-efa"
+}
+variable "image_tag" {
+  type    = string
+  default = "1.0"
+}
