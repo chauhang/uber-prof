@@ -59,7 +59,7 @@ kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/container
 kubectl apply -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=v1.3.0"
 ```
 
-## Build Contaner Base Image
+## Build Container Base Image
 
 ### AWS-EKS
 
