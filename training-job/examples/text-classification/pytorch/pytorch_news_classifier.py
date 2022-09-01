@@ -21,11 +21,14 @@ from torchtext.data.functional import to_map_style_dataset
 from torchtext.datasets import AG_NEWS
 from tqdm import tqdm
 from torch.nn.parallel import DistributedDataParallel as DDP
+import transformers
 from transformers import BertModel, BertTokenizer, AdamW
 from transformers import (
     get_linear_schedule_with_warmup,
 )
 
+print("PyTorch Version: ", torch.__version__)
+print("Transformers Version: ", transformers.__version__)
 class_names = ["World", "Sports", "Business", "Sci/Tech"]
 device = int(os.environ["LOCAL_RANK"]) if "LOCAL_RANK" in os.environ else "cpu"
 global_rank = int(os.environ["RANK"]) if "RANK" in os.environ else "cpu"
