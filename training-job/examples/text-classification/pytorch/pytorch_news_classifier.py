@@ -378,14 +378,12 @@ def ddp_main(rank, world_size, args):
         setup()
     tokenizer, train_data_loader, val_data_loader, test_data_loader = prepare_data(args=args)
 
-    # if torch.cuda.is_available():
-    #     torch.cuda.set_device(device)
-
     model = NewsClassifier()
 
     model = model.to(device)
 
-    model = DDP(model)
+    if rank != "cpu":
+        model = DDP(model)
 
     optimizer, scheduler, loss_fn = setOptimizer(args, model)
 
@@ -452,7 +450,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     WORLD_SIZE = int(os.environ.get("WORLD_SIZE", torch.cuda.device_count()))
-    # print("<<<<<<<<<<<<<<<<<<<< World Size: ", WORLD_SIZE)
     # When gpus are available
     if torch.cuda.device_count() > 0:
         if "LOCAL_RANK" in os.environ:
