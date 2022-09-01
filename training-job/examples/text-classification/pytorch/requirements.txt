@@ -1,0 +1,5 @@
+torch>=1.12.1
+torchtext
+numpy
+tqdm
+transformers
