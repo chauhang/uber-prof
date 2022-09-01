@@ -20,6 +20,7 @@ from torchdata.datapipes.iter import IterDataPipe
 from torchtext.data.functional import to_map_style_dataset
 from torchtext.datasets import AG_NEWS
 from tqdm import tqdm
+from torch.nn.parallel import DistributedDataParallel as DDP
 from transformers import BertModel, BertTokenizer, AdamW
 from transformers import (
     get_linear_schedule_with_warmup,
@@ -28,6 +29,7 @@ from transformers import (
 class_names = ["World", "Sports", "Business", "Sci/Tech"]
 device = int(os.environ["LOCAL_RANK"]) if "LOCAL_RANK" in os.environ else "cpu"
 global_rank = int(os.environ["RANK"]) if "RANK" in os.environ else "cpu"
+
 
 class NewsDataset(IterDataPipe):
     def __init__(self, tokenizer, source, max_length, num_samples):
@@ -131,9 +133,10 @@ def prepare_data(args):
     test_count = int(train_count / 10)
     train_count = train_count - (val_count + test_count)
 
-    print("Number of samples used for training: {}".format(train_count))
-    print("Number of samples used for validation: {}".format(val_count))
-    print("Number of samples used for test: {}".format(test_count))
+    if global_rank == 0:
+        print("Number of samples used for training: {}".format(train_count))
+        print("Number of samples used for validation: {}".format(val_count))
+        print("Number of samples used for test: {}".format(test_count))
 
     train_data_loader = create_data_loader(
         args=args, tokenizer=tokenizer, source=train_dataset, count=train_count
@@ -286,16 +289,20 @@ def startTraining(args, model, train_data_loader, val_data_loader, loss_fn, opti
 
     for epoch in range(args["max_epochs"]):
 
-        print(f"Epoch {epoch + 1}/{args['max_epochs']}")
+        if global_rank == 0:
+            print(f"Epoch {epoch + 1}/{args['max_epochs']}")
 
         train_acc, train_loss = train_epoch(
             args, model, train_data_loader, loss_fn, optimizer, scheduler
         )
 
-        print(f"Train loss {train_loss} accuracy {train_acc}")
+        if global_rank == 0:
+            print(f"Train loss {train_loss} accuracy {train_acc}")
 
         val_acc, val_loss = eval_model(args, model, val_data_loader, loss_fn)
-        print(f"Val   loss {val_loss} accuracy {val_acc}")
+
+        if global_rank == 0:
+            print(f"Val   loss {val_loss} accuracy {val_acc}")
 
         history["train_acc"].append(train_acc)
         history["train_loss"].append(train_loss)
@@ -345,9 +352,14 @@ def get_predictions(model, test_data_loader):
     real_values = torch.stack(real_values).cpu()
     return review_texts, predictions, prediction_probs, real_values
 
-def setup(rank, world_size):
+
+def setup():
     # initialize the process group
-    dist.init_process_group("nccl", rank=global_rank, world_size=world_size)
+    dist.init_process_group("nccl")
+    if torch.cuda.is_available():
+        torch.cuda.set_device(device)
+
+    dist.barrier()
 
 
 def cleanup():
@@ -360,15 +372,17 @@ def ddp_main(rank, world_size, args):
     :param model: Instance of the NewsClassifier class
     """
     if device != "cpu":
-        setup(rank, world_size)
+        setup()
     tokenizer, train_data_loader, val_data_loader, test_data_loader = prepare_data(args=args)
 
-    if torch.cuda.is_available():
-        torch.cuda.set_device(device)
+    # if torch.cuda.is_available():
+    #     torch.cuda.set_device(device)
 
     model = NewsClassifier()
 
     model = model.to(device)
+
+    model = DDP(model)
 
     optimizer, scheduler, loss_fn = setOptimizer(args, model)
 
@@ -386,7 +400,8 @@ def ddp_main(rank, world_size, args):
         args=args, model=model, val_data_loader=val_data_loader, loss_fn=loss_fn
     )
 
-    print(test_acc.item())
+    if global_rank == 0:
+        print(test_acc.item())
 
     get_predictions(model=model, test_data_loader=test_data_loader)
 
@@ -399,7 +414,6 @@ def ddp_main(rank, world_size, args):
 
     if device != "cpu":
         cleanup()
-
 
 
 if __name__ == "__main__":
@@ -431,12 +445,11 @@ if __name__ == "__main__":
         help="Custom vocab file",
     )
 
-    parser.add_argument(
-        "--model_save_path", type=str, default="models", help="Path to save model"
-    )
+    parser.add_argument("--model_save_path", type=str, default="models", help="Path to save model")
 
     args = parser.parse_args()
     WORLD_SIZE = int(os.environ.get("WORLD_SIZE", torch.cuda.device_count()))
+    # print("<<<<<<<<<<<<<<<<<<<< World Size: ", WORLD_SIZE)
     # When gpus are available
     if torch.cuda.device_count() > 0:
         if "LOCAL_RANK" in os.environ:
