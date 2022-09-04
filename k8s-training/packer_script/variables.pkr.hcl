@@ -1,6 +1,6 @@
 variable "ami_prefix" {
   type    = string
-  default = "learn-packer-linux-aws-redis"
+  default = "aws-nccl-efa"
 }
 variable "instance_type" {
   type    = string
@@ -41,4 +41,16 @@ variable "install_root" {
 variable "efa_installer_fn" {
   type    = string
   default = "aws-efa-installer-latest.tar.gz"
+}
+variable "repo_name" {
+  type    = string
+  default = "pytorch"
+}
+variable "image_name" {
+  type    = string
+  default = "pytorch-aws-efa"
+}
+variable "image_tag" {
+  type    = string
+  default = "1.0"
 }

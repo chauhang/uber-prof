@@ -34,6 +34,7 @@ build {
       "mkdir -p ${var.install_root}/packages",
       "cd ${var.install_root}/packages || exit",
       "echo Installing EFA  ${var.efa_installer_fn}",
+      // Download and install EFA driver from the below public s3 bucket
       "wget https://s3-us-west-2.amazonaws.com/aws-efa-installer/${var.efa_installer_fn}",
       "tar -xf ${var.efa_installer_fn}",
       "cd aws-efa-installer || exit",
@@ -141,4 +142,8 @@ build {
   //     "systemctl restart amazon-cloudwatch-agent.service",
   //   ]
   // }
+  post-processor "docker-tag" {
+      repository =  "${var.repo_name}/${var.image_name}"
+      tags = [ "${var.image_tag}" ]
+    }
 }

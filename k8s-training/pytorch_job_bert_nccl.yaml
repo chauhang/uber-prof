@@ -21,24 +21,27 @@ spec:
         spec:
           containers:
             - name: pytorch
-              image: jagadeeshj/pytorch-dist-bert:pt-12
+              image: jagadeeshj/pytorch:latest
               imagePullPolicy: Always
               command: ["/bin/bash", "-c"]
               args:
                 - echo starting;
                   cd /data;
-                  torchrun --rdzv_backend $PET_RDZV_BACKEND --rdzv_endpoint $PET_RDZV_ENDPOINT --nnodes $PET_NNODES  --nproc_per_node $PET_N_PROC_PER_NODE pytorch_news_classifier.py;
+                  torchrun --rdzv_backend $PET_RDZV_BACKEND --rdzv_endpoint $PET_RDZV_ENDPOINT --nnodes $PET_NNODES  --nproc_per_node $PET_NPROC_PER_NODE pytorch_news_classifier.py;
               env:
-                - name: LOGLEVEL
+                - name: NCCL_DEBUG
                   value: INFO
-                - name: NCCL_IB_DISABLE
-                  value: "1"
-                - name: NCCL_P2P_DISABLE
-                  value: "1"
-                - name: NCCL_NET
-                  value: Socket
+                # For NCCL envvars refer: https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html 
+                # - name: NCCL_IB_DISABLE
+                #   value: "1"
+                # - name: NCCL_P2P_DISABLE
+                #   value: "1"
+                # - name: NCCL_NET
+                #   value: Socket
+                # Enable CUDA_LAUNCH_BLOCKING for debugging
                 # - name: CUDA_LAUNCH_BLOCKING
                 #   value: "1"
+                # Uncomment below envvar to enable EFA in aws
                 # - name: FI_PROVIDER
                 #   value: efa
               resources:

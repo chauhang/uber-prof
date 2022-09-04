@@ -27,20 +27,23 @@ spec:
               args:
                 - echo starting;
                   cd /data;
-                  torchrun --rdzv_backend $PET_RDZV_BACKEND --rdzv_endpoint $PET_RDZV_ENDPOINT --nnodes $PET_NNODES --nproc_per_node $PET_N_PROC_PER_NODE cifar.py;
+                  torchrun --rdzv_backend $PET_RDZV_BACKEND --rdzv_endpoint $PET_RDZV_ENDPOINT --nnodes $PET_NNODES --nproc_per_node $PET_NPROC_PER_NODE cifar.py;
               env:
                 - name: NCCL_DEBUG
                   value: INFO
                 - name: ENABLE_NCCL_BASE_COLLECTIVES
                   value: "0"
-                - name: NCCL_IB_DISABLE
-                  value: "1"
-                - name: NCCL_P2P_DISABLE
-                  value: "1"
-                - name: NCCL_NET
-                  value: Socket
-                - name: CUDA_LAUNCH_BLOCKING
-                  value: "1"
+                # For NCCL envvars refer: https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html 
+                # - name: NCCL_IB_DISABLE
+                #   value: "1"
+                # - name: NCCL_P2P_DISABLE
+                #   value: "1"
+                # - name: NCCL_NET
+                #   value: Socket
+                # Enable CUDA_LAUNCH_BLOCKING for debugging
+                # - name: CUDA_LAUNCH_BLOCKING
+                #   value: "1"
+                # Uncomment below envvar to enable EFA in aws
                 # - name: FI_PROVIDER
                 #   value: efa
               resources:
