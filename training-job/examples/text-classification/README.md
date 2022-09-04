@@ -1,6 +1,8 @@
 ## AG News classification
 
-This example fine tunes hugging face bert model to classify AG News text
+This example fine tunes hugging face bert model to classify AG News text and 
+uses PyTorch Lightning training loop.
+
 
 ## Install dependent packages
 
