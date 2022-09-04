@@ -38,7 +38,7 @@ def prepare_data():
 
     # We can use an image folder dataset the way we have it setup.
     # Create the dataset
-    dataroot = "img_align_celeba"
+    dataroot = args["dataroot"]
 
     # Spatial size of training images. All images will be resized to this
     #   size using a transformer.
@@ -355,6 +355,14 @@ if __name__ == "__main__":
         default=False,
         help="Train using pytorch fsdp (default: False)",
     )
+
+    parser.add_argument(
+        "--dataroot",
+        type=str,
+        default="dataset/img_align_celeba",
+        help="Dataset path (default: dataset/img_align_celeba)",
+    )
+
     args = parser.parse_args()
 
     args = vars(args)
