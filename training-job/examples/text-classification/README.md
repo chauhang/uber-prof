@@ -22,7 +22,7 @@ python news_classifier.py --max_epochs 1
 
 To train in the gpu environment
 ```
-python news_classifier.py --max_epochs 1 --gpus 2 --strategy ddp
+python news_classifier.py --max_epochs 1 --devices 2 --strategy ddp --accelerator gpu
 ```
 
 To train in the slurm environment

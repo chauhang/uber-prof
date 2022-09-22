@@ -12,7 +12,7 @@
 ### change WORLD_SIZE as gpus/node * num_nodes
 export MASTER_PORT=12356
 echo "MASTER_PORT="$MASTER_PORT
-export WORLD_SIZE=16
+export WORLD_SIZE=8
 ### get the first node name as master address - customized for vgg slurm
 ### e.g. master(gnodee[2-5],gnoded1) == gnodee2
 echo "NODELIST="${SLURM_NODELIST}
@@ -47,5 +47,5 @@ export NCCL_SOCKET_IFNAME="en,eth,em,bond"
 
 ### the command to run
 dcgmi profile --pause
-srun --prolog job_prolog.sh --epilog job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true python bert.py --strategy=ddp --num_nodes=2 --gpus=4 --max_epochs=15 --resume True
+srun --prolog job_prolog.sh --epilog job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true python bert.py --strategy=ddp --num_nodes=2 --accelerator=gpu --devices=4 --max_epochs=15 --resume True
 dcgmi profile --resume
