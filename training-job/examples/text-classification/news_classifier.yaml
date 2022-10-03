@@ -27,7 +27,7 @@ spec:
               args:
                 - echo starting;
                   cd /data;
-                  torchrun --rdzv_backend $PET_RDZV_BACKEND --rdzv_endpoint $PET_RDZV_ENDPOINT --nnodes $PET_NNODES --nproc_per_node $PET_NPROC_PER_NODE news_classifier.py --max_epochs 15 --gpus 2 --strategy ddp --num_nodes 2;
+                  torchrun --rdzv_backend $PET_RDZV_BACKEND --rdzv_endpoint $PET_RDZV_ENDPOINT --nnodes $PET_NNODES --nproc_per_node $PET_N_PROC_PER_NODE news_classifier.py --max_epochs 15 --devices 4 --accelerator gpu --strategy ddp --num_nodes 2;
               env:
                 - name: NCCL_DEBUG
                   value: INFO

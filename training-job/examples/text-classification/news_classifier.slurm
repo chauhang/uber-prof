@@ -46,5 +46,5 @@ export NCCL_SOCKET_IFNAME="en,eth,em,bond"
 
 ### the command to run
 dcgmi profile --pause
-srun --prolog ../../job_prolog.sh --epilog ../../job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true torchrun  --nnodes 2 --rdzv_id 101 --rdzv_backend c10d --rdzv_endpoint "$master_addr:29500" --nproc_per_node=4 news_classifier.py --max_epochs 15 --gpus 4 --strategy ddp --num_nodes 2
+srun --prolog ../../job_prolog.sh --epilog ../../job_epilog.sh /usr/local/cuda/bin/nsys profile -t cuda,nvtx -s none -x true torchrun  --nnodes 2 --rdzv_id 101 --rdzv_backend c10d --rdzv_endpoint "$master_addr:29500" --nproc_per_node=4 news_classifier.py --max_epochs 15 --devices 4 --accelerator ddp --strategy ddp --num_nodes 2
 dcgmi profile --resume
