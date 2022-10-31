@@ -36,7 +36,6 @@ def serve_multiple_models(model, tokenizer, encoded_input):
     start_time = time.time()
 
     predictions2_vmap = vmap(fmodel)(params, buffers, **encoded_input, return_dict=False)
-    # print("Prediction: ", predictions2_vmap)
     print("Prediction: ", predictions2_vmap[0][0].shape, predictions2_vmap[1][0].shape)
     print("Time taken for prediction with vmap: ", time.time() - start_time)
 
