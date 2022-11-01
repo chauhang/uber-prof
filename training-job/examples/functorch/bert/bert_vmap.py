@@ -1,7 +1,8 @@
-import time
+import timeit
 
 import torch
 from functorch import combine_state_for_ensemble, vmap
+from tqdm import tqdm
 from transformers import BertTokenizer, BertModel
 
 
@@ -19,25 +20,43 @@ def run_sample_prediction(model, tokenizer, encoded_input):
 
 def serve_multiple_models(model, tokenizer, encoded_input):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    models = [model.to(device) for _ in range(2)]
+    NUM_OF_MODELS = 5
+    models = [model.to(device) for _ in range(NUM_OF_MODELS)]
 
     encoded_input = tokenizer(text, return_tensors="pt")
     encoded_input = encoded_input.to(device)
 
-    start_time = time.time()
-    predictions2 = [model(encoded_input.input_ids, return_dict=False) for model in models]
-    print("Prediction: ", predictions2[0][0].shape, predictions2[1][0].shape)
-    print("Time taken for prediction without vmap: ", time.time() - start_time)
+    print("Running Warm up")
+    WARM_UP = 100
+    for _ in tqdm(range(WARM_UP)):
+        _ = [model(**encoded_input, return_dict=False) for model in models]
+
+    N_REPEAT = 1000
+    mean_hf_time = 0
+    for _ in tqdm(range(N_REPEAT)):
+        mean_hf_time += timeit.timeit(
+            lambda: [model(**encoded_input, return_dict=False) for model in models], number=1
+        )
+
+    print("Avg time taken for prediction without vmap: ", round(mean_hf_time / N_REPEAT, 2))
     print("\n")
 
     fmodel, params, buffers = combine_state_for_ensemble(models)
     [p.requires_grad_() for p in params]
 
-    start_time = time.time()
+    print("Running Warm up")
+    WARM_UP = 100
+    for _ in tqdm(range(WARM_UP)):
+        _ = vmap(fmodel)(params, buffers, **encoded_input, return_dict=False)
 
-    predictions2_vmap = vmap(fmodel)(params, buffers, **encoded_input, return_dict=False)
-    print("Prediction: ", predictions2_vmap[0][0].shape, predictions2_vmap[1][0].shape)
-    print("Time taken for prediction with vmap: ", time.time() - start_time)
+    N_REPEAT = 1000
+    mean_hf_time = 0
+    for _ in tqdm(range(N_REPEAT)):
+        mean_hf_time += timeit.timeit(
+            lambda: vmap(fmodel)(params, buffers, **encoded_input, return_dict=False), number=1
+        )
+
+    print("Avg time taken for prediction with vmap: ", round(mean_hf_time / N_REPEAT, 2))
 
 
 if __name__ == "__main__":
