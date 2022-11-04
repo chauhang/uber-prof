@@ -4,3 +4,4 @@ captum
 functorch
 transformers
 timeit
+tqdm
