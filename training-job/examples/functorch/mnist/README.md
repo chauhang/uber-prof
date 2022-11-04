@@ -96,10 +96,7 @@ Avg time taken for prediction with vmap:  0.01
 
 ```
 
-We can visibly see a huge improvement in prediction time with and without vmap.
-
-Without vmap it takes 0.24 seconds to predict where as with vmap it takes only `0.002` seconds to predict
-
+For more speedup, increase the `num_models` parameter based on gpu availability. 
 
 
 
