@@ -1,5 +1,7 @@
 import torch
 import time
+import timeit
+from tqdm import tqdm
 from PIL import Image
 from torchvision import transforms
 from argparse import ArgumentParser
@@ -52,21 +54,37 @@ def serve_multiple_models(args, model, img_tensor):
 
     img_tensor = img_tensor.float().to(device)
 
-    start_time = time.time()
-    predictions2 = [model(img_tensor) for model in models]
-    print("Prediction: ", predictions2)
-    print("Time taken for prediction without vmap: ", time.time() - start_time)
+    print("Running Warm up")
+    WARM_UP = 100
+    for _ in tqdm(range(WARM_UP)):
+        _ = [model(img_tensor) for model in models]
+
+    print("Running inference")
+    N_REPEAT = 1000
+    mean_hf_time = 0
+    for _ in tqdm(range(N_REPEAT)):
+        mean_hf_time += timeit.timeit(lambda: [model(img_tensor) for model in models], number=1)
+
+    print("Avg time taken for prediction without vmap: ", round(mean_hf_time / N_REPEAT, 2))
     print("\n")
 
     fmodel, params, buffers = combine_state_for_ensemble(models)
     [p.requires_grad_() for p in params]
 
-    # print([p.size(0) for p in params])
+    print("Running Warm up")
+    WARM_UP = 100
+    for _ in tqdm(range(WARM_UP)):
+        _ = vmap(fmodel, in_dims=(0, 0, None))(params, buffers, img_tensor)
 
-    start_time = time.time()
-    predictions2_vmap = vmap(fmodel, in_dims=(0, 0, None))(params, buffers, img_tensor)
-    print("Prediction: ", predictions2_vmap)
-    print("Time taken for prediction with vmap: ", time.time() - start_time)
+    print("Running Inference")
+    N_REPEAT = 1000
+    mean_hf_time = 0
+    for _ in tqdm(range(N_REPEAT)):
+        mean_hf_time += timeit.timeit(
+            lambda: vmap(fmodel, in_dims=(0, 0, None))(params, buffers, img_tensor), number=1
+        )
+
+    print("Avg time taken for prediction with vmap: ", round(mean_hf_time / N_REPEAT, 2))
 
 
 if __name__ == "__main__":
@@ -83,7 +101,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_models",
         type=int,
-        default=2,
+        default=10,
         help="Number of models to predict",
     )
 
