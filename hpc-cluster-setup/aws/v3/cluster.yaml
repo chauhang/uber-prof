@@ -1,8 +1,8 @@
-Region: ap-northeast-2
+Region: us-west-2
 Image:
   Os: alinux2
 HeadNode:
-  InstanceType: c5.9xlarge
+  InstanceType: c5.4xlarge
   Iam:
     AdditionalIamPolicies:
       - Policy: arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
@@ -11,16 +11,16 @@ HeadNode:
       - Policy: arn:aws:iam::aws:policy/AmazonSSMFullAccess
       - Policy: arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess
       # Add below policy for capacity reservation
-      - Policy: arn:aws:iam::<ACCOUNT_ID>:policy/RunInstancesInCapacityReservation
+      # - Policy: arn:aws:iam::<ACCOUNT_ID>:policy/RunInstancesInCapacityReservation
     S3Access:
       - BucketName: mlbucket-057bf1b1
   Ssh:
-    KeyName: hpc-ap-northeast-2
+    KeyName: hpc-key-new
   LocalStorage:
     RootVolume:
       Size: 150
   Networking:
-    SubnetId: subnet-072c93863e2163515
+    SubnetId: subnet-0ad12c8e201776d22
   CustomActions:
     OnNodeConfigured:
       Script: s3://mlbucket-057bf1b1/head-post-install.sh
@@ -38,12 +38,12 @@ Scheduling:
             MountDir: /scratch
       Networking:
         SubnetIds:
-          - subnet-01b6f2a414cc350bc
+          - subnet-0284e16a9c06d3c73
         PlacementGroup:
           Enabled: true
       ComputeResources:
-        - Name: queue0-p4d24xlarge
-          InstanceType: p4d.24xlarge
+        - Name: queue0-g58xlarge
+          InstanceType: g5.8xlarge
           # MaxCount: 4
           # MinCount: 2
           Efa:

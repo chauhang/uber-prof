@@ -8,7 +8,7 @@ if [ ! -d "$CONDA_DIRECTORY" ]; then
   echo "Conda installation not found. Installing..."
   wget -O miniconda.sh "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" && bash miniconda.sh -b -p /lustre/.conda && /lustre/.conda/bin/conda init bash && eval "$(/lustre/.conda/bin/conda shell.bash hook)" && rm -rf miniconda.sh
 
-  conda install python=3.8 -y
+  conda install python=3.10 -y
 fi
 
 chown -R ec2-user:ec2-user /lustre

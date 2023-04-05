@@ -11,23 +11,28 @@ sudo yum remove datacenter-gpu-manager -y
 chmod 0755 /usr/bin/pkexec
 
 # Set Environment variables
-export INSTALL_ROOT=/home/ec2-user
+export INSTALL_ROOT=${HOME}
 export CUDA_HOME=/usr/local/cuda
 export EFA_HOME=/opt/amazon/efa
 export MPI_HOME=/opt/amazon/openmpi
 export FI_PROVIDER="efa"
 export NCCL_DEBUG=INFO
-export FI_EFA_USE_DEVICE_RDMA=1  # Use for p4dn
+export FI_EFA_USE_DEVICE_RDMA=1
 export NCCL_ALGO=ring
 
 echo "================================"
 echo "===========Check EFA============"
 echo "================================"
-fi_info -t FI_EP_RDM -p efa
+fi_info -c FI_HMEM -p efa
+ret_val=$?
+if [ $ret_val -ne 0 ]; then
+    echo "Instance does not support EFA"
+fi
 
 echo "================================"
 echo "====Testing all_reduce_perf====="
 echo "================================"
+
 # test all_reduce_perf
 bin=$INSTALL_ROOT/packages/nccl-tests/build/all_reduce_perf
 # -g no_of_gpus, -b min_bytes, -e max_bytes, -f step_factor
@@ -54,6 +59,7 @@ LD_LIBRARY_PATH=$CUDA_HOME/lib:$CUDA_HOME/lib64:$EFA_HOME/lib64:$MPI_HOME/lib64:
 echo "Download and Install Nvidia DCGM"
 cd /lustre || exit
 sudo yum install -y datacenter-gpu-manager
+
 # For running tests use debug verison of DCGM
 # wget -O datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm https://mlbucket-4d8b827c.s3.amazonaws.com/datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
 # sudo rpm -i datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
