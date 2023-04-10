@@ -11,20 +11,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from argparse import ArgumentParser
+import math
+import os
+import lightning as L
+from lightning.pytorch.callbacks import (
+    EarlyStopping,
+    ModelCheckpoint,
+    LearningRateMonitor,
+)
+from lightning.pytorch.cli import LightningCLI
 
-import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 from datasets import load_dataset
 from sklearn.metrics import accuracy_score
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
-from torchmetrics import Accuracy
+from torchdata.datapipes.iter import IterDataPipe
 from transformers import AdamW, BertModel, BertTokenizer
 
 print("PyTorch version: ", torch.__version__)
-print("PyTorch Lightning version: ", pl.__version__)
+print("PyTorch Lightning version: ", L.__version__)
 
 
 class NewsDataset(Dataset):
@@ -83,10 +90,10 @@ class NewsDataset(Dataset):
         }
 
 
-class BertDataModule(pl.LightningDataModule):  # pylint: disable=too-many-instance-attributes
+class BertDataModule(L.LightningDataModule):  # pylint: disable=too-many-instance-attributes
     """Data Module Class."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, dataset, num_train_samples, num_test_samples, batch_size=4, num_workers=1):
         """Initialization of inherited lightning data module."""
         super(BertDataModule, self).__init__()  # pylint: disable=super-with-arguments
         self.pre_trained_model_name = "bert-base-uncased"
@@ -96,8 +103,11 @@ class BertDataModule(pl.LightningDataModule):  # pylint: disable=too-many-instan
         self.max_length = 100
         self.encoding = None
         self.tokenizer = None
-        self.args = kwargs
-        self.dataset = None
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.num_train_samples = num_train_samples
+        self.num_test_samples = num_test_samples
 
     def prepare_data(self):
         """Implementation of abstract class."""
@@ -118,7 +128,7 @@ class BertDataModule(pl.LightningDataModule):  # pylint: disable=too-many-instan
         self.tokenizer = BertTokenizer.from_pretrained(self.pre_trained_model_name)
 
         if stage == "fit":
-            num_train_samples = self.args["num_train_samples"]
+            num_train_samples = self.num_train_samples
 
             num_val_samples = int(num_train_samples * 0.1)
             num_train_samples -= num_val_samples
@@ -129,7 +139,7 @@ class BertDataModule(pl.LightningDataModule):  # pylint: disable=too-many-instan
             self.train_data = self.train_data["train"]
         else:
             self.test_data = self.dataset["test"]
-            num_test_samples = self.args["num_test_samples"]
+            num_test_samples = self.num_test_samples
             remaining = len(self.test_data) - num_test_samples
             self.test_data = self.dataset["train"].train_test_split(
                 train_size=remaining, test_size=num_test_samples
@@ -152,8 +162,8 @@ class BertDataModule(pl.LightningDataModule):  # pylint: disable=too-many-instan
 
         return DataLoader(
             dataset,
-            batch_size=self.args.get("batch_size", 4),
-            num_workers=self.args.get("num_workers", 1),
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
         )
 
     def train_dataloader(self):
@@ -183,11 +193,11 @@ class BertDataModule(pl.LightningDataModule):  # pylint: disable=too-many-instan
 
 
 class BertNewsClassifier(
-    pl.LightningModule
+    L.LightningModule
 ):  # pylint: disable=too-many-ancestors,too-many-instance-attributes
     """Bert Model Class."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, lr):
         """Initializes the network, optimizer and scheduler."""
         super(BertNewsClassifier, self).__init__()  # pylint: disable=super-with-arguments
         self.pre_trained_model_name = "bert-base-uncased"  # pylint: disable=invalid-name
@@ -204,11 +214,10 @@ class BertNewsClassifier(
 
         self.scheduler = None
         self.optimizer = None
-        self.args = kwargs
+        self.val_outputs = []
+        self.test_outputs = []
 
-        self.train_acc = Accuracy()
-        self.val_acc = Accuracy()
-        self.test_acc = Accuracy()
+        self.lr = lr
 
         self.preds = []
         self.target = []
@@ -293,10 +302,8 @@ class BertNewsClassifier(
         output = self.forward(input_ids, attention_mask)
         _, y_hat = torch.max(output, dim=1)  # pylint: disable=no-member
         loss = F.cross_entropy(output, targets)
-        self.train_acc(y_hat, targets)
-        self.log("train_acc", self.train_acc.compute())
         self.log("train_loss", loss)
-        return {"loss": loss, "acc": self.train_acc.compute()}
+        return {"loss": loss}
 
     def test_step(self, test_batch, batch_idx):
         """Performs test and computes the accuracy of the model.
@@ -311,12 +318,9 @@ class BertNewsClassifier(
         targets = test_batch["targets"].to(self.device)
         output = self.forward(input_ids, attention_mask)
         _, y_hat = torch.max(output, dim=1)  # pylint: disable=no-member
-        test_acc = accuracy_score(y_hat.cpu(), targets.cpu())
-        self.test_acc(y_hat, targets)
-        self.preds += y_hat.tolist()
-        self.target += targets.tolist()
-        self.log("test_acc", self.test_acc.compute())
-        return {"test_acc": torch.tensor(test_acc)}  # pylint: disable=no-member
+        test_acc = torch.tensor(accuracy_score(y_hat.cpu(), targets.cpu()))
+        self.test_outputs.append(test_acc)
+        return {"test_acc": test_acc}
 
     def validation_step(self, val_batch, batch_idx):
         """Performs validation of data in batches.
@@ -331,19 +335,32 @@ class BertNewsClassifier(
         attention_mask = val_batch["attention_mask"].to(self.device)
         targets = val_batch["targets"].to(self.device)
         output = self.forward(input_ids, attention_mask)
-        _, y_hat = torch.max(output, dim=1)  # pylint: disable=no-member
         loss = F.cross_entropy(output, targets)
-        self.val_acc(y_hat, targets)
-        self.log("val_acc", self.val_acc.compute())
-        self.log("val_loss", loss, sync_dist=True)
-        return {"val_step_loss": loss, "acc": self.val_acc.compute()}
+        self.val_outputs.append(loss)
+        return {"val_step_loss": loss}
+
+    def on_validation_epoch_end(self):
+        """
+        Computes average validation accuracy
+        """
+        avg_loss = torch.stack(self.val_outputs).mean()
+        self.log("val_loss", avg_loss, sync_dist=True)
+        self.val_outputs.clear()
+
+    def on_test_epoch_end(self):
+        """
+        Computes average test accuracy score
+        """
+        avg_test_acc = torch.stack(self.test_outputs).mean()
+        self.log("avg_test_acc", avg_test_acc)
+        self.test_outputs.clear()
 
     def configure_optimizers(self):
         """Initializes the optimizer and learning rate scheduler.
         Returns:
              output - Initialized optimizer and scheduler
         """
-        self.optimizer = AdamW(self.parameters(), lr=self.args.get("lr", 0.001))
+        self.optimizer = AdamW(self.parameters(), lr=self.lr)
         self.scheduler = {
             "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer,
@@ -358,33 +375,24 @@ class BertNewsClassifier(
         return [self.optimizer], [self.scheduler]
 
 
+def cli_main():
+    early_stopping = EarlyStopping(monitor="val_loss", mode="min", verbose=True)
+
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=os.getcwd(), save_top_k=1, verbose=True, monitor="val_loss", mode="min"
+    )
+
+    lr_logger = LearningRateMonitor()
+    cli = LightningCLI(
+        BertNewsClassifier,
+        BertDataModule,
+        run=False,
+        save_config_callback=None,
+        trainer_defaults={"callbacks": [early_stopping, checkpoint_callback, lr_logger]},
+    )
+    # cli.model=torch.compile(cli.model)
+    cli.trainer.fit(cli.model, datamodule=cli.datamodule)
+    cli.trainer.test(ckpt_path="best", datamodule=cli.datamodule)
+
 if __name__ == "__main__":
-    parser = ArgumentParser(description="Bert-News Classifier Example")
-    parser.add_argument(
-        "--num_train_samples",
-        type=int,
-        default=2000,
-        metavar="N",
-        help="Samples for training and evaluation steps (default: 15000) Maximum:100000",
-    )
-    parser.add_argument(
-        "--num_test_samples",
-        type=int,
-        default=200,
-        metavar="N",
-        help="Samples for training and evaluation steps (default: 15000) Maximum:100000",
-    )
-
-    parser = pl.Trainer.add_argparse_args(parent_parser=parser)
-
-    args = parser.parse_args()
-    dict_args = vars(args)
-    dm = BertDataModule(**dict_args)
-    dm.prepare_data()
-    dm.setup(stage="fit")
-
-    model = BertNewsClassifier(**dict_args)
-
-    trainer = pl.Trainer.from_argparse_args(args)
-    trainer.fit(model, dm)
-    trainer.test(model, dm)
+    cli_main()

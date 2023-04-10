@@ -9,11 +9,18 @@
   aws configure
   ```
 
+* Upgrade boto3
+
+  ```bash
+  pip install boto3 --upgrade
+  ```
+
 * Install aws parallel cluster cli
 
   ```bash
   pip3 install "aws-parallelcluster" --upgrade --user
   ```
+
 
 ## Create s3 bucket
 
@@ -28,6 +35,8 @@ Output:
 ```bash
 make_bucket: s3://mlbucket-057bf1b1
 ```
+
+:warning: Make necessary changes to the post install scripts
 
 ## Upload post-install script
 
@@ -155,6 +164,7 @@ Refer: <https://docs.aws.amazon.com/parallelcluster/latest/ug/Image-v3.html>
 #### [Building custom ami](./custom-ami/Readme.md)
 
 ### Create HPC cluster
+
 
 ```bash
 # Create hpc cluster
