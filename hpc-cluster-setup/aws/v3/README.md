@@ -9,11 +9,18 @@
   aws configure
   ```
 
+* Upgrade boto3
+
+  ```bash
+  pip install boto3 --upgrade
+  ```
+
 * Install aws parallel cluster cli
 
   ```bash
   pip3 install "aws-parallelcluster" --upgrade --user
   ```
+
 
 ## Create s3 bucket
 
@@ -29,6 +36,8 @@ Output:
 make_bucket: s3://mlbucket-057bf1b1
 ```
 
+:warning: Make necessary changes to the post install scripts
+
 ## Upload post-install script
 
 ```bash
@@ -36,14 +45,44 @@ aws s3 cp head-post-install.sh s3://mlbucket-${BUCKET_POSTFIX}
 upload: ./post-install.sh to s3://mlbucket-057bf1b1/head-post-install.sh
 
 aws s3 cp compute-post-install.sh s3://mlbucket-${BUCKET_POSTFIX}
-upload: ./post-install.sh to s3://mlbucket-057bf1b1/compute-post-install.sh
+upload: ./compute-post-install.sh to s3://mlbucket-057bf1b1/compute-post-install.sh
 ```
 
 ## Create VPC
 
-```bash
-aws cloudformation create-stack --stack-name VPC-Large-Scale --template-body file://VPC-Large-Scale.yml
+Please follow the steps below to deploy your new VPC:
+
+1. Click on [this link](https://console.aws.amazon.com/cloudformation/home#/stacks/create/template) to access CloudFormation. Ensure you are in your target region, if not click on the upper left menu to switch to your preferred region.
+2. On the Create Stack dialog, in the section *Specify template*, **tick** the box *Upload a template file*. **Click** on *Choose file* then select the file `VPC-Large-Scale.yaml`.
+3. You see a list of parameters, do as follows:
+  - *Stack Name* is arbitrary, pick `LargeScaleVPC` or any representative name.
+  - In *Availability Zones Configuration*, select all the AZs in the region in the *Availability Zones* setting. If using `us-west-1` pick `us-west-1a`, `us-west-1b` and `us-west-1c`.
+  - The *Number of Availability Zones* must be equal to the number of AZ you picked in the previous step. If you selected all AZs in `us-west-1` then set the value to `3`.
+  - Select an AZ for PublicSubnetAZ
+  - Leave the rest as default
+5. **Click** on the *Next* orange button at the bottom of the page and do it again until landing on the page *Step 4: Review*.
+6. Scroll down to the bottom of the page. **Tick** the acknowledgement box in the *Capabilities* section and create stack.
+
+It will take a few minutes to deploy your VPC architecture. Once deployed, you need to identify the subnet IDs you'll use to place your instances using your AWS ParallelCluster configuration.
+
+1. Go to your VPC dashboard through this [link](https://console.aws.amazon.com/vpc/home).
+2. **Click** on *Subnets* then filter the subnets using the availability zone ID you'd like to use. For example, filter with `eu-west-1a` to get subnets only for that Availability Zone.
+3. You see a list of subnets, you should see one private subnet deployed using the CloudFormation template. Keep note of the subnet ID (similar to `subnet-abc12345defg`).
+4. Clear the filter and filter using the string `Public Subnet`. Keep note of the subnet ID.
+5. Modify the AWS ParallelConfiguration as indicated below
+```yaml
+# in the following section, set the subnet value to the Public Subnet ID
+HeadNode:
+  Networking:
+    SubnetId: subnet-abc123456defg
+# in the following section, set the subnet value to the Private Subnet ID
+Scheduling:
+  SlurmQueues:
+      Networking:
+        SubnetIds:
+          - subnet-xyz123456abcd
 ```
+6. Create your cluster with the new configuration file.
 
 ### Create key-pair for hpc cluster
 
@@ -125,6 +164,7 @@ Refer: <https://docs.aws.amazon.com/parallelcluster/latest/ug/Image-v3.html>
 #### [Building custom ami](./custom-ami/Readme.md)
 
 ### Create HPC cluster
+
 
 ```bash
 # Create hpc cluster
@@ -259,9 +299,9 @@ Add new dashboard with loki data source with logs as visualization panel.
 
 ## Demo Videos
 
-### [![Grafana Dashboard](Dashboards.gif)](https://youtu.be/KhvCCPjHwCY)
+### [![Grafana Dashboard](images/Dashboards.gif)](https://youtu.be/KhvCCPjHwCY)
 
-### [![Slurm Log](Job_log.gif)](https://youtu.be/RzOkHsmRM3U)
+### [![Slurm Log](images/Job_log.gif)](https://youtu.be/RzOkHsmRM3U)
 
 ### Tests
 

@@ -1,33 +1,150 @@
 #!/bin/bash
-set -x
+# set -x
 # Thanks to Yaroslav Bulatov for the implementaion of this script.
 # https://github.com/cybertronai/aws-network-benchmarks
 # Note: This script is tested on Alinux2 runnin on GPU instance with Tesla volta arch.
 
-# Remove older versions of dcgm
-sudo yum remove datacenter-gpu-manager -y
+export CUDA_VERSION=11.7.0
+export DRIVER_VERSION=515.43.04
+
+sudo chsh -s /bin/bash
+
+sudo yum update -y
+sudo yum groupinstall "Development Tools" -y
+
+export INSTALL_ROOT=/home/ec2-user
+
+mkdir -p ${INSTALL_ROOT}/packages
+cd ${INSTALL_ROOT}/packages || exit
+
+export EFA_INSTALLER_FN=aws-efa-installer-latest.tar.gz
+echo "Installing EFA " $EFA_INSTALLER_FN
+
+if [ ! -f "$EFA_INSTALLER_FN" ]; then  
+    wget https://s3-us-west-2.amazonaws.com/aws-efa-installer/$EFA_INSTALLER_FN
+fi
+tar -xf $EFA_INSTALLER_FN
+cd aws-efa-installer || exit
+sudo ./efa_installer.sh -y
+
+# echo "Installing CUDA"
+cd ${INSTALL_ROOT}/packages || exit
+
+if [ ! -d "/usr/local/cuda-${CUDA_VERSION::4}" ]; then
+    if [ ! -f "cuda_${CUDA_VERSION}_${DRIVER_VERSION}_linux.run" ]; then  
+        wget https://developer.download.nvidia.com/compute/cuda/${CUDA_VERSION}/local_installers/cuda_${CUDA_VERSION}_${DRIVER_VERSION}_linux.run
+    fi
+    chmod +x cuda_${CUDA_VERSION}_${DRIVER_VERSION}_linux.run
+    sudo sh cuda_${CUDA_VERSION}_${DRIVER_VERSION}_linux.run --silent --override --toolkit --samples --no-opengl-libs
+fi
+export PATH="/usr/local/cuda/bin:$PATH"
+export LD_LIBRARY_PATH="/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
+
+echo 'Building nccl'
+cd ${INSTALL_ROOT}/packages || exit
+if [ -d nccl ]; then  
+    rm -rf nccl
+fi
+git clone https://github.com/NVIDIA/nccl.git || echo ignored
+cd nccl || exit
+git checkout tags/v2.17.1-1 -b v2.17.1-1
+# Choose compute capability 70 for Tesla V100
+# Refer https://en.wikipedia.org/wiki/CUDA#Supported_GPUs for different architecture 
+make -j src.build NVCC_GENCODE="-gencode=arch=compute_70,code=sm_70"
+make pkg.txz.build
+cd build/pkg/txz || exit
+
+tar xvfJ nccl_2.17.1-1+cuda${CUDA_VERSION::4}_x86_64.txz
+sudo cp -r nccl_2.17.1-1+cuda${CUDA_VERSION::4}_x86_64/include/* /usr/local/cuda/include/
+sudo cp -r nccl_2.17.1-1+cuda${CUDA_VERSION::4}_x86_64/lib/* /usr/local/cuda/lib64/
+
+echo 'Building aws-ofi-nccl'
+if [ -d aws-ofi-nccl ]; then  
+    aws-ofi-nccl
+fi
+cd ${INSTALL_ROOT}/packages || exit
+git clone https://github.com/aws/aws-ofi-nccl.git || echo exists
+cd aws-ofi-nccl || exit
+git checkout aws
+git pull
+./autogen.sh
+
+./configure --prefix=/usr --with-mpi=/opt/amazon/openmpi --with-libfabric=/opt/amazon/efa/ --with-cuda=/usr/local/cuda --with-nccl=${INSTALL_ROOT}/packages/nccl/build
+
+sudo yum install libudev-devel -y
+PATH=/opt/amazon/efa/bin:$PATH LDFLAGS="-L/opt/amazon/efa/lib64" make MPI=1 MPI_HOME=/opt/amazon/openmpi CUDA_HOME=/usr/local/cuda NCCL_HOME=${INSTALL_ROOT}/packages/nccl/build
+sudo make install
+
+echo 'Installing bazel'
+sudo update-alternatives --set gcc "/usr/bin/gcc48"
+sudo update-alternatives --set g++ "/usr/bin/g++48"
+
+cd ${INSTALL_ROOT}/packages || exit
+echo 'downloading bazel'
+if [ -f bazel-5.0.0-installer-linux-x86_64.sh ]; then  
+    rm -rf bazel-5.0.0-installer-linux-x86_64.sh
+fi
+wget https://github.com/bazelbuild/bazel/releases/download/5.0.0/bazel-5.0.0-installer-linux-x86_64.sh
+sudo bash bazel-5.0.0-installer-linux-x86_64.sh
+
+sudo sh -c 'echo "/opt/amazon/openmpi/lib64/" > mpi.conf'
+sudo sh -c 'echo "$INSTALL_ROOT/packages/nccl/build/lib/" > nccl.conf'
+sudo sh -c 'echo "/usr/local/cuda/lib64/" > cuda.conf'
+sudo ldconfig
+
+cd /usr/local/lib || exit
+sudo rm -f ./libmpi.so
+sudo ln -s /opt/amazon/openmpi/lib64/libmpi.so ./libmpi.s
+
+
+echo 'installing NCCL'
+cd ${INSTALL_ROOT}/packages || exit
+if [ -d nccl-tests ]; then  
+    rm -rf nccl-tests
+fi
+git clone https://github.com/NVIDIA/nccl-tests.git || echo ignored
+cd nccl-tests || exit
+make MPI=1 MPI_HOME=/opt/amazon/openmpi CUDA_HOME=/usr/local/cuda NCCL_HOME=$INSTALL_ROOT/packages/nccl/build
+
+echo "Installing additional packages"
+if [ -f epel-release-7-14.noarch.rpm ]; then  
+    rm -rf epel-release-*.rpm
+fi
+wget https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
+sudo rpm -Uvh epel-release*rpm
+sudo yum install nload -y
+
+sudo yum install -y mosh
+sudo yum install -y htop
+sudo yum install -y gdb
+sudo yum install -y tmux
+sudo yum install -y
 
 # Fix Polkit Privilege Escalation Vulnerability
 chmod 0755 /usr/bin/pkexec
 
 # Set Environment variables
-export INSTALL_ROOT=/home/ec2-user
 export CUDA_HOME=/usr/local/cuda
 export EFA_HOME=/opt/amazon/efa
 export MPI_HOME=/opt/amazon/openmpi
 export FI_PROVIDER="efa"
 export NCCL_DEBUG=INFO
-export FI_EFA_USE_DEVICE_RDMA=1  # Use for p4dn
+export FI_EFA_USE_DEVICE_RDMA=1
 export NCCL_ALGO=ring
 
 echo "================================"
 echo "===========Check EFA============"
 echo "================================"
-fi_info -t FI_EP_RDM -p efa
+fi_info -c FI_HMEM -p efa
+ret_val=$?
+if [ $ret_val -ne 0 ]; then
+    echo "Instance does not support EFA"
+fi
 
 echo "================================"
 echo "====Testing all_reduce_perf====="
 echo "================================"
+
 # test all_reduce_perf
 bin=$INSTALL_ROOT/packages/nccl-tests/build/all_reduce_perf
 # -g no_of_gpus, -b min_bytes, -e max_bytes, -f step_factor
@@ -51,10 +168,20 @@ LD_LIBRARY_PATH=$CUDA_HOME/lib:$CUDA_HOME/lib64:$EFA_HOME/lib64:$MPI_HOME/lib64:
 #     --mca pml ^cm --mca btl tcp,self --mca btl_tcp_if_exclude lo,docker0 --bind-to none \
 #     $INSTALL_ROOT/packages/nccl-tests/build/all_reduce_perf -b 8 -e 1G -f 2 -g 1 -c 1 -n 100
 
-echo "Download and Install Nvidia DCGM"
-cd /lustre || exit
+# Remove older versions of dcgm
+dcgmi -v
+ret_val=$?
+if [ $ret_val -eq 0 ]; then
+    sudo yum remove datacenter-gpu-manager -y
+fi
+
+echo "Install Nvidia DCGM"
+sudo yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+sudo yum update
 sudo yum install -y datacenter-gpu-manager
+
 # For running tests use debug verison of DCGM
+# cd /lustre || exit
 # wget -O datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm https://mlbucket-4d8b827c.s3.amazonaws.com/datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
 # sudo rpm -i datacenter-gpu-manager-2.2.6-1-x86_64_debug.rpm
 
@@ -66,8 +193,10 @@ dcgmi health -g 0 -s a
 
 # Install lbnl-nhc
 cd "$INSTALL_ROOT"/packages || exit
-wget https://github.com/mej/nhc/releases/download/1.4.3/lbnl-nhc-1.4.3.tar.gz
-tar -xvzf lbnl-nhc-1.4.3.tar.gz
+if [ ! -f lbnl-nhc-1.4.3.tar.gz ]; then  
+    wget https://github.com/mej/nhc/releases/download/1.4.3/lbnl-nhc-1.4.3.tar.gz
+    tar -xvzf lbnl-nhc-1.4.3.tar.gz
+fi
 cd lbnl-nhc-1.4.3 || exit
 ./configure --prefix=/usr --sysconfdir=/etc --libexecdir=/usr/libexec
 make test

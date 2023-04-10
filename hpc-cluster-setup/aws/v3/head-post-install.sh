@@ -1,20 +1,29 @@
 #!/bin/bash
 
-# configuring the conda environment
-CONDA_DIRECTORY=/lustre/.conda/bin
+sudo chsh -s /bin/bash
 
-if [ ! -d "$CONDA_DIRECTORY" ]; then
-  # control will enter here if $CONDA_DIRECTORY doesn't exist.
+cd /lustre || exit
+command -v conda
+ret_val=$?
+if [ $ret_val -ne 0 ]; then
   echo "Conda installation not found. Installing..."
-  wget -O miniconda.sh "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" && bash miniconda.sh -b -p /lustre/.conda && /lustre/.conda/bin/conda init bash && eval "$(/lustre/.conda/bin/conda shell.bash hook)" && rm -rf miniconda.sh
+  wget -O miniconda.sh "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" 
+  bash miniconda.sh -b -p /lustre/.conda
+  /lustre/.conda/bin/conda init bash
+  eval "$(/lustre/.conda/bin/conda shell.bash hook)"
+  rm -rf miniconda.sh
 
-  conda install python=3.8 -y
+  conda install python=3.10 -y
 fi
 
 chown -R ec2-user:ec2-user /lustre
 
 source /lustre/.conda/etc/profile.d/conda.sh
 sudo -u ec2-user /lustre/.conda/bin/conda init bash
+
+cat >> ~/.bashrc << EOF
+export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
+EOF
 
 # Add Health check program to slurm config
 sudo sed -i '10 a\#\n# HEALTH CHECKS\n#\nHealthCheckProgram=/usr/sbin/nhc\nHealthCheckInterval=10\nHealthCheckNodeState=ANY' /opt/slurm/etc/slurm.conf
